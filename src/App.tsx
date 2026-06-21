@@ -7,6 +7,7 @@ import Testing from "./pages/Testing";
 import Results from "./pages/Results";
 import Correlations from "./pages/Correlations";
 import PeerComparison from "./pages/PeerComparison";
+import CrossSport from "./pages/CrossSport";
 import Periodization from "./pages/Periodization";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/results" element={<Results />} />
         <Route path="/correlations" element={<Correlations />} />
         <Route path="/peers" element={<PeerComparison />} />
+        <Route path="/cross-sport" element={<CrossSport />} />
         <Route path="/periodization" element={<Periodization />} />
       </Routes>
     </Layout>

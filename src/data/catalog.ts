@@ -210,3 +210,16 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Endurance: "#22c55e",
   Mobility: "#eab308",
 };
+
+export const SPORT_COLORS: Record<string, string> = {
+  tennis: "#38bdf8",
+  athletics: "#f97316",
+  swimming: "#34d399",
+};
+
+/** Tests shared by every sport — the fair basis for cross-sport comparison. */
+export function commonTests(): TestType[] {
+  return TEST_TYPES.filter((t) =>
+    SPORTS.every((s) => t.sports.length === 0 || t.sports.includes(s.id)),
+  );
+}
