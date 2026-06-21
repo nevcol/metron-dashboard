@@ -6,6 +6,16 @@ import type { Sport, TestType } from "../types";
  */
 export const SPORTS: Sport[] = [
   {
+    id: "tennis",
+    name: "Tennis",
+    events: [
+      // Tennis results are tracked as the athlete's UTR rating at the event
+      // (Universal Tennis Rating, ~1-16.5, higher is better).
+      { id: "singles", name: "Singles", unit: "UTR", higherIsBetter: true },
+      { id: "doubles", name: "Doubles", unit: "UTR", higherIsBetter: true },
+    ],
+  },
+  {
     id: "athletics",
     name: "Athletics",
     events: [
@@ -44,7 +54,7 @@ export const TEST_TYPES: TestType[] = [
     unit: "s",
     category: "Speed",
     higherIsBetter: false,
-    sports: ["athletics", "swimming"],
+    sports: ["athletics", "swimming", "tennis"],
   },
   {
     id: "sprint30",
@@ -63,6 +73,42 @@ export const TEST_TYPES: TestType[] = [
     category: "Speed",
     higherIsBetter: false,
     sports: ["athletics"],
+  },
+  {
+    id: "agility505",
+    name: "5-0-5 Agility Test",
+    shortName: "5-0-5",
+    unit: "s",
+    category: "Speed",
+    higherIsBetter: false,
+    sports: ["tennis"],
+  },
+  {
+    id: "serveVel",
+    name: "Serve Velocity",
+    shortName: "Serve",
+    unit: "km/h",
+    category: "Power",
+    higherIsBetter: true,
+    sports: ["tennis"],
+  },
+  {
+    id: "mbThrow",
+    name: "Med-Ball Rotational Throw",
+    shortName: "MB Throw",
+    unit: "m",
+    category: "Power",
+    higherIsBetter: true,
+    sports: ["tennis"],
+  },
+  {
+    id: "grip",
+    name: "Grip Strength",
+    shortName: "Grip",
+    unit: "kg",
+    category: "Strength",
+    higherIsBetter: true,
+    sports: ["tennis"],
   },
   {
     id: "cmj",
@@ -125,7 +171,7 @@ export const TEST_TYPES: TestType[] = [
     unit: "kg",
     category: "Strength",
     higherIsBetter: true,
-    sports: [],
+    sports: ["athletics", "swimming"],
   },
   {
     id: "ift",

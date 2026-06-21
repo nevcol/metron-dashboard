@@ -8,6 +8,7 @@ import {
 } from "react";
 import type {
   Athlete,
+  AthleteProfile,
   CompetitionResult,
   Dataset,
   TestResult,
@@ -18,6 +19,7 @@ import { generateDataset } from "./generate";
 const STORAGE_KEY = "metron.dataset.v1";
 
 interface StoreValue extends Dataset {
+  addAthlete: (a: Omit<Athlete, "id" | "profiles"> & { profile: Omit<AthleteProfile, "id" | "athleteId"> }) => void;
   addTestResult: (r: Omit<TestResult, "id">) => void;
   addCompetitionResult: (r: Omit<CompetitionResult, "id">) => void;
   resetData: () => void;
@@ -49,6 +51,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<StoreValue>(
     () => ({
       ...dataset,
+      addAthlete: ({ profile, ...rest }) =>
+        setDataset((d) => {
+          const id = `ath-manual-${Date.now()}`;
+          const athlete: Athlete = {
+            ...rest,
+            id,
+            profiles: [{ ...profile, id: `prof-${id}-1`, athleteId: id }],
+          };
+          return { ...d, athletes: [...d.athletes, athlete] };
+        }),
       addTestResult: (r) =>
         setDataset((d) => ({
           ...d,

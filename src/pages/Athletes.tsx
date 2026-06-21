@@ -1,16 +1,18 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHead } from "../components/Layout";
-import { Avatar } from "../components/ui";
-import { SPORT_BY_ID } from "../data/catalog";
+import { Avatar, Card } from "../components/ui";
+import { SPORTS, SPORT_BY_ID } from "../data/catalog";
 import { useStore } from "../data/store";
 import { ageOn, genderLabel, yearsBetween } from "../lib/format";
+import type { Gender } from "../types";
 
 export default function Athletes() {
-  const { athletes, testResults } = useStore();
+  const { athletes, testResults, addAthlete } = useStore();
   const [sport, setSport] = useState("all");
   const [gender, setGender] = useState("all");
   const [query, setQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
 
   const testCounts = useMemo(() => {
     const m = new Map<string, number>();
@@ -25,12 +27,145 @@ export default function Athletes() {
     return true;
   });
 
+  const [form, setForm] = useState({
+    name: "",
+    gender: "F" as Gender,
+    birthDate: "2008-01-01",
+    sportId: "tennis",
+    eventId: SPORT_BY_ID["tennis"].events[0].id,
+    experienceYears: "3",
+    heightCm: "175",
+    massKg: "68",
+  });
+
+  const formSport = SPORT_BY_ID[form.sportId];
+
+  function submit() {
+    if (!form.name.trim()) return;
+    const started = new Date("2026-06-21");
+    started.setFullYear(started.getFullYear() - (parseInt(form.experienceYears) || 0));
+    addAthlete({
+      name: form.name.trim(),
+      gender: form.gender,
+      birthDate: form.birthDate,
+      heightCm: parseInt(form.heightCm) || 175,
+      massKg: parseInt(form.massKg) || 68,
+      profile: {
+        sportId: form.sportId,
+        eventIds: [form.eventId],
+        startedOn: started.toISOString().slice(0, 10),
+      },
+    });
+    setForm((f) => ({ ...f, name: "" }));
+    setShowForm(false);
+  }
+
   return (
     <>
       <PageHead
         title="Athlete Roster"
         subtitle="Each athlete carries one profile per sport. Open a profile to see their testing history, peer standing and training plan."
+        actions={
+          <button className="btn" onClick={() => setShowForm((s) => !s)}>
+            {showForm ? "Close" : "+ Add athlete"}
+          </button>
+        }
       />
+
+      {showForm && (
+        <Card title="Add an athlete" sub="New athletes start with an empty test battery — log results from the Testing page as they are tested.">
+          <div className="toolbar" style={{ marginBottom: 0, alignItems: "flex-end" }}>
+            <div className="field">
+              <label>Name</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Full name"
+              />
+            </div>
+            <div className="field">
+              <label>Gender</label>
+              <select
+                value={form.gender}
+                onChange={(e) => setForm({ ...form, gender: e.target.value as Gender })}
+              >
+                <option value="F">Women</option>
+                <option value="M">Men</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Birth date</label>
+              <input
+                type="date"
+                value={form.birthDate}
+                onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Sport</label>
+              <select
+                value={form.sportId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    sportId: e.target.value,
+                    eventId: SPORT_BY_ID[e.target.value].events[0].id,
+                  })
+                }
+              >
+                {SPORTS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Primary event</label>
+              <select
+                value={form.eventId}
+                onChange={(e) => setForm({ ...form, eventId: e.target.value })}
+              >
+                {formSport.events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Exp (yrs)</label>
+              <input
+                type="number"
+                value={form.experienceYears}
+                onChange={(e) => setForm({ ...form, experienceYears: e.target.value })}
+                style={{ width: 70 }}
+              />
+            </div>
+            <div className="field">
+              <label>Height (cm)</label>
+              <input
+                type="number"
+                value={form.heightCm}
+                onChange={(e) => setForm({ ...form, heightCm: e.target.value })}
+                style={{ width: 80 }}
+              />
+            </div>
+            <div className="field">
+              <label>Mass (kg)</label>
+              <input
+                type="number"
+                value={form.massKg}
+                onChange={(e) => setForm({ ...form, massKg: e.target.value })}
+                style={{ width: 80 }}
+              />
+            </div>
+            <button className="btn" onClick={submit}>
+              Save athlete
+            </button>
+          </div>
+        </Card>
+      )}
 
       <div className="toolbar">
         <div className="field">

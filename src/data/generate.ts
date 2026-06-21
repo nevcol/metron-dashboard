@@ -37,6 +37,34 @@ const REF: Record<string, { m: number; f: number; better: "high" | "low" }> = {
   rsi: { m: 2.5, f: 2.05, better: "high" },
   ift: { m: 19.5, f: 18, better: "high" },
   sitreach: { m: 12, f: 18, better: "high" },
+  // Tennis-specific
+  agility505: { m: 2.38, f: 2.58, better: "low" },
+  serveVel: { m: 168, f: 142, better: "high" },
+  mbThrow: { m: 9.2, f: 6.6, better: "high" },
+};
+
+/** Strength tests scale with body mass; factor by gender (1RM ÷ mass etc.). */
+const MASS_TESTS: Record<string, { m: number; f: number }> = {
+  squat1rm: { m: 1.85, f: 1.45 },
+  clean1rm: { m: 1.25, f: 0.95 },
+  bench1rm: { m: 1.2, f: 0.78 },
+  grip: { m: 0.7, f: 0.55 },
+};
+
+/** Which tests make up each sport's battery (REF-based and mass-based). */
+const SPORT_BATTERY: Record<string, { ref: string[]; mass: string[] }> = {
+  tennis: {
+    ref: ["sprint10", "agility505", "cmj", "sj", "broad", "rsi", "serveVel", "mbThrow", "ift", "sitreach"],
+    mass: ["squat1rm", "grip"],
+  },
+  athletics: {
+    ref: ["sprint30", "sprint10", "flying20", "cmj", "sj", "broad", "rsi", "ift", "sitreach"],
+    mass: ["squat1rm", "clean1rm", "bench1rm"],
+  },
+  swimming: {
+    ref: ["sprint10", "cmj", "sj", "broad", "rsi", "ift", "sitreach"],
+    mass: ["squat1rm", "bench1rm"],
+  },
 };
 
 /** Performance multiplier by age: athletes mature toward a peak around 23. */
@@ -80,7 +108,7 @@ export function generateDataset(seed = 20260621): Dataset {
   const competitionResults: CompetitionResult[] = [];
   const trainingWeeks: TrainingWeek[] = [];
 
-  const N = 28;
+  const N = 40;
   for (let i = 0; i < N; i++) {
     const gender: Gender = rand() < 0.5 ? "M" : "F";
     const first = (gender === "M" ? FIRST_M : FIRST_F)[Math.floor(rand() * 12)];
@@ -100,9 +128,13 @@ export function generateDataset(seed = 20260621): Dataset {
 
     const athleteId = `ath-${i + 1}`;
 
-    // Assign one or two sport profiles.
+    // Assign a sport profile. Tennis is weighted highest as it is the squad
+    // currently being onboarded; athletics and swimming make up the rest.
     const profiles: AthleteProfile[] = [];
-    const primarySport = rand() < 0.78 ? SPORTS[0] : SPORTS[1];
+    const sportPick = rand();
+    const sportId0 =
+      sportPick < 0.5 ? "tennis" : sportPick < 0.82 ? "athletics" : "swimming";
+    const primarySport = SPORTS.find((s) => s.id === sportId0) ?? SPORTS[0];
     const evPool = primarySport.events;
     const evCount = 1 + (rand() < 0.5 ? 1 : 0);
     const eventIds: string[] = [];
@@ -135,7 +167,7 @@ export function generateDataset(seed = 20260621): Dataset {
     const sessionMonths: number[] = [];
     for (let mAgo = MONTHS; mAgo >= 0; mAgo -= 2) sessionMonths.push(mAgo);
 
-    const testsToRun = ["sprint30", "sprint10", "flying20", "cmj", "sj", "broad", "rsi", "ift", "sitreach"];
+    const battery = SPORT_BATTERY[sportId] ?? SPORT_BATTERY.athletics;
 
     for (const mAgo of sessionMonths) {
       // Progress fraction across the window, scaled by adherence and (inverse) age.
@@ -143,7 +175,7 @@ export function generateDataset(seed = 20260621): Dataset {
       const trainability = age < 20 ? 1.1 : 0.8;
       const progress = elapsed * adherence * trainability; // 0..~1.2
 
-      for (const tid of testsToRun) {
+      for (const tid of battery.ref) {
         const ref = REF[tid];
         if (!ref) continue;
         const base = gender === "M" ? ref.m : ref.f;
@@ -159,6 +191,8 @@ export function generateDataset(seed = 20260621): Dataset {
           value = (base / quality) * (1 + noise);
         }
         if (tid === "sitreach") value = base + talent * 4 + progress * 3 + randn() * 1.5;
+        // Larger-magnitude readings (serve velocity) read better as whole units.
+        const value2 = base >= 50 ? Math.round(value * 10) / 10 : Math.round(value * 100) / 100;
 
         testResults.push({
           id: `tr-${athleteId}-${tid}-${mAgo}`,
@@ -166,20 +200,16 @@ export function generateDataset(seed = 20260621): Dataset {
           sportId,
           testTypeId: tid,
           date: isoMonthsAgo(mAgo, Math.floor(rand() * 20)),
-          value: Math.round(value * 100) / 100,
+          value: value2,
         });
       }
 
       // Strength tests scale with body mass and quality.
       const strengthQuality = ageF * (1 + 0.18 * talent + 0.14 * progress);
-      const squat = massKg * (gender === "M" ? 1.85 : 1.45) * strengthQuality * (1 + randn() * 0.03);
-      const clean = squat * (0.68 + randn() * 0.02);
-      const bench = massKg * (gender === "M" ? 1.2 : 0.78) * strengthQuality * (1 + randn() * 0.03);
-      for (const [tid, val] of [
-        ["squat1rm", squat],
-        ["clean1rm", clean],
-        ["bench1rm", bench],
-      ] as const) {
+      for (const tid of battery.mass) {
+        const f = MASS_TESTS[tid];
+        if (!f) continue;
+        const val = massKg * (gender === "M" ? f.m : f.f) * strengthQuality * (1 + randn() * 0.03);
         testResults.push({
           id: `tr-${athleteId}-${tid}-${mAgo}`,
           athleteId,
@@ -192,7 +222,10 @@ export function generateDataset(seed = 20260621): Dataset {
     }
 
     // ---- Competition results during competition phases ----
-    const comps = ["Indoor Open", "Regional Champs", "League Round", "National Trials", "Grand Prix", "Club Meet"];
+    const comps =
+      sportId === "tennis"
+        ? ["UTR Pro Series", "ITF Junior Open", "Regional Tour", "National Closed", "Club Championship", "Masters Cup"]
+        : ["Indoor Open", "Regional Champs", "League Round", "National Trials", "Grand Prix", "Club Meet"];
     for (let mAgo = MONTHS; mAgo >= 0; mAgo--) {
       if (phaseForMonth(mAgo) !== "Competition") continue;
       if (rand() > 0.55) continue;
@@ -203,6 +236,9 @@ export function generateDataset(seed = 20260621): Dataset {
       const quality = ageF * (1 + 0.13 * talent + 0.1 * progress);
       // Event reference marks (decent club performances).
       const evRef: Record<string, { m: number; f: number }> = {
+        // Tennis: UTR rating (higher is better).
+        singles: { m: 9.6, f: 9.1 },
+        doubles: { m: 9.1, f: 8.6 },
         "100m": { m: 11.0, f: 12.2 },
         "200m": { m: 22.3, f: 24.8 },
         "400m": { m: 49.5, f: 56.0 },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   ResponsiveContainer,
@@ -113,7 +113,18 @@ export default function Correlations() {
 
   // Scatter explorer.
   const [xKey, setXKey] = useState("t:cmj");
-  const [yKey, setYKey] = useState("t:sprint30");
+  const [yKey, setYKey] = useState("t:serveVel");
+
+  // Keep the chosen axes valid when the sport (and its test list) changes.
+  useEffect(() => {
+    const keys = new Set(variables.map((v) => v.key));
+    if (!keys.has(xKey) || !keys.has(yKey)) {
+      const tests = variables.filter((v) => v.key.startsWith("t:"));
+      setXKey(tests[0]?.key ?? variables[0].key);
+      setYKey(tests[1]?.key ?? variables[1]?.key ?? variables[0].key);
+    }
+  }, [variables, xKey, yKey]);
+
   const xVar = variables.find((v) => v.key === xKey) ?? variables[0];
   const yVar = variables.find((v) => v.key === yKey) ?? variables[1];
 
