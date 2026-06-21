@@ -1,0 +1,53 @@
+name: Build & Deploy
+
+# `build` runs on every push/PR and is the CI gate (type-check + Vite build).
+# `deploy` publishes the live demo to GitHub Pages on pushes to the
+# development/main branches. Pages must be enabled once under
+# Settings → Pages → Build and deployment → Source: "GitHub Actions".
+on:
+  push:
+    branches:
+      - main
+      - claude/athlete-testing-dashboard-ommj6u
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Type-check and build
+        run: npm run build
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    # Deploy only for branch pushes and manual runs (never PRs).
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    # Serialize Pages deployments so concurrent runs don't clobber each other.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
