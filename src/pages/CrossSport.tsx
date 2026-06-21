@@ -13,9 +13,9 @@ import { PageHead } from "../components/Layout";
 import { Avatar, Bar, Card } from "../components/ui";
 import { SPORTS, SPORT_BY_ID, SPORT_COLORS, commonTests } from "../data/catalog";
 import { useStore } from "../data/store";
-import { ageOn, genderLabel } from "../lib/format";
+import { ageBand, ageOn, genderLabel } from "../lib/format";
 import { mean, percentileRank, round } from "../lib/stats";
-import type { Athlete, TestResult } from "../types";
+import type { Athlete, Gender, TestResult } from "../types";
 
 type Mode = "pct" | "raw";
 
@@ -38,10 +38,29 @@ export default function CrossSport() {
   const tests = useMemo(() => commonTests(), []);
   const [mode, setMode] = useState<Mode>("pct");
 
+  // ── Filters ──────────────────────────────────────────────────────────────
+  const [genderFilter, setGenderFilter] = useState<"all" | Gender>("all");
+  const [ageBandFilter, setAgeBandFilter] = useState<string>("all");
+
+  const availableBands = useMemo(() => {
+    const bands = new Set<string>();
+    for (const a of athletes) bands.add(ageBand(ageOn(a.birthDate)));
+    return [...bands].sort();
+  }, [athletes]);
+
+  const filteredAthletes = useMemo(() => {
+    return athletes.filter((a) => {
+      if (genderFilter !== "all" && a.gender !== genderFilter) return false;
+      if (ageBandFilter !== "all" && ageBand(ageOn(a.birthDate)) !== ageBandFilter) return false;
+      return true;
+    });
+  }, [athletes, genderFilter, ageBandFilter]);
+
+  // ── Core statistics over the filtered pool ────────────────────────────────
   const { pctFor, rawFor, pool, composite } = useMemo(() => {
     const pool = new Map<string, number[]>();
     const values = new Map<string, Map<string, number>>();
-    for (const a of athletes) {
+    for (const a of filteredAthletes) {
       const m = new Map<string, number>();
       for (const t of tests) {
         const v = latestValue(testResults, a.id, t.id);
@@ -62,7 +81,7 @@ export default function CrossSport() {
       return percentileRank(v, pool.get(testId) ?? [], t.higherIsBetter);
     };
     const composite = new Map<string, number>();
-    for (const a of athletes) {
+    for (const a of filteredAthletes) {
       const pcts: number[] = [];
       for (const t of tests) {
         const p = pctFor(a.id, t.id);
@@ -71,17 +90,17 @@ export default function CrossSport() {
       if (pcts.length) composite.set(a.id, mean(pcts));
     }
     return { pctFor, rawFor, pool, composite };
-  }, [athletes, testResults, tests]);
+  }, [filteredAthletes, testResults, tests]);
 
   const sportAthletes = useMemo(() => {
     const m = new Map<string, Athlete[]>();
     for (const s of SPORTS) m.set(s.id, []);
-    for (const a of athletes) {
+    for (const a of filteredAthletes) {
       const sid = a.profiles[0]?.sportId;
       if (sid && m.has(sid)) m.get(sid)!.push(a);
     }
     return m;
-  }, [athletes]);
+  }, [filteredAthletes]);
 
   // Mean (percentile or raw) of a test for a sport's athletes.
   const sportMean = (sportId: string, testId: string, m: Mode): number | null => {
@@ -112,7 +131,7 @@ export default function CrossSport() {
           count: roster.length,
           women,
           men: roster.length - women,
-          avgAge: round(mean(roster.map((a) => ageOn(a.birthDate))), 1),
+          avgAge: roster.length ? round(mean(roster.map((a) => ageOn(a.birthDate))), 1) : 0,
           avgComposite: round(comps.length ? mean(comps) : 0, 0),
         };
       }),
@@ -123,14 +142,19 @@ export default function CrossSport() {
   const ranked = useMemo(
     () =>
       [...composite.entries()]
-        .map(([id, score]) => ({ athlete: athletes.find((a) => a.id === id)!, score }))
+        .map(([id, score]) => ({ athlete: filteredAthletes.find((a) => a.id === id)!, score }))
+        .filter((r) => r.athlete)
         .sort((a, b) => b.score - a.score),
-    [composite, athletes],
+    [composite, filteredAthletes],
   );
 
+  // Ensure the selected athlete stays valid after filter changes.
   const [athleteId, setAthleteId] = useState(ranked[0]?.athlete.id ?? athletes[0]?.id ?? "");
-  const athlete = athletes.find((a) => a.id === athleteId);
-  const rankIdx = ranked.findIndex((r) => r.athlete.id === athleteId);
+  const effectiveAthleteId = ranked.some((r) => r.athlete.id === athleteId)
+    ? athleteId
+    : ranked[0]?.athlete.id ?? "";
+  const athlete = filteredAthletes.find((a) => a.id === effectiveAthleteId);
+  const rankIdx = ranked.findIndex((r) => r.athlete.id === effectiveAthleteId);
 
   // For raw mode, comparisons are per-test (units differ between tests).
   const [rawTestId, setRawTestId] = useState(tests[0]?.id ?? "");
@@ -146,9 +170,9 @@ export default function CrossSport() {
       .filter(Boolean) as { test: string; percentile: number }[];
   }, [athlete, tests, pctFor]);
 
-  // Raw leaderboard across all athletes for the selected test.
+  // Raw leaderboard across filtered athletes for the selected test.
   const rawBoard = useMemo(() => {
-    const rows = athletes
+    const rows = filteredAthletes
       .map((a) => {
         const v = rawFor(a.id, rawTestId);
         return v === null ? null : { athlete: a, value: v };
@@ -156,7 +180,26 @@ export default function CrossSport() {
       .filter((r): r is { athlete: Athlete; value: number } => r !== null);
     rows.sort((a, b) => (rawTest?.higherIsBetter ? b.value - a.value : a.value - b.value));
     return rows;
-  }, [athletes, rawFor, rawTestId, rawTest]);
+  }, [filteredAthletes, rawFor, rawTestId, rawTest]);
+
+  const filterLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (genderFilter !== "all") parts.push(genderFilter === "M" ? "Men" : "Women");
+    if (ageBandFilter !== "all") parts.push(`Age ${ageBandFilter}`);
+    return parts.length ? parts.join(", ") : null;
+  }, [genderFilter, ageBandFilter]);
+
+  if (filteredAthletes.length === 0) {
+    return (
+      <>
+        <PageHead
+          title="Cross-Sport Comparison"
+          actions={<FilterBar {...{ genderFilter, setGenderFilter, ageBandFilter, setAgeBandFilter, availableBands }} />}
+        />
+        <div className="empty">No athletes match the current filters.</div>
+      </>
+    );
+  }
 
   if (!athlete) {
     return (
@@ -168,7 +211,7 @@ export default function CrossSport() {
   }
 
   const athleteSport = SPORT_BY_ID[athlete.profiles[0]?.sportId ?? ""];
-  const rawRankIdx = rawBoard.findIndex((r) => r.athlete.id === athleteId);
+  const rawRankIdx = rawBoard.findIndex((r) => r.athlete.id === effectiveAthleteId);
 
   return (
     <>
@@ -180,25 +223,52 @@ export default function CrossSport() {
             : "Raw mode: actual measured values compared side by side. Units differ between tests, so comparisons are shown per test rather than on a single scale."
         }
         actions={
-          <div className="seg">
-            <button className={mode === "pct" ? "active" : ""} onClick={() => setMode("pct")}>
-              Percentile
-            </button>
-            <button className={mode === "raw" ? "active" : ""} onClick={() => setMode("raw")}>
-              Raw values
-            </button>
+          <div className="row" style={{ gap: 10 }}>
+            <FilterBar
+              genderFilter={genderFilter}
+              setGenderFilter={setGenderFilter}
+              ageBandFilter={ageBandFilter}
+              setAgeBandFilter={setAgeBandFilter}
+              availableBands={availableBands}
+            />
+            <div className="seg">
+              <button className={mode === "pct" ? "active" : ""} onClick={() => setMode("pct")}>
+                Percentile
+              </button>
+              <button className={mode === "raw" ? "active" : ""} onClick={() => setMode("raw")}>
+                Raw values
+              </button>
+            </div>
           </div>
         }
       />
 
-      <h2 className="section-title" style={{ marginTop: 4 }}>
+      {filterLabel && (
+        <div className="row" style={{ marginBottom: 16, marginTop: -8 }}>
+          <span className="pill accent">
+            <span>Filtered:</span> {filterLabel}
+          </span>
+          <span className="faint" style={{ fontSize: 12.5 }}>
+            {filteredAthletes.length} of {athletes.length} athletes
+          </span>
+          <button
+            className="btn ghost"
+            style={{ padding: "5px 10px", fontSize: 12 }}
+            onClick={() => { setGenderFilter("all"); setAgeBandFilter("all"); }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
+      <h2 className="section-title" style={{ marginTop: filterLabel ? 0 : 4 }}>
         Population by sport
       </h2>
 
       {mode === "pct" ? (
         <div className="grid cols-3">
           <div style={{ gridColumn: "span 2" }}>
-            <Card title="Physical profile by sport" sub="Mean percentile per shared test, across the whole population">
+            <Card title="Physical profile by sport" sub="Mean percentile per shared test, across the filtered pool">
               <ResponsiveContainer width="100%" height={330}>
                 <RadarChart data={sportRadar} outerRadius={120}>
                   <PolarGrid stroke="#243456" />
@@ -225,6 +295,9 @@ export default function CrossSport() {
                   <span className="item" key={s.id}>
                     <span className="dot" style={{ background: SPORT_COLORS[s.id] }} />
                     {s.name}
+                    <span className="faint" style={{ fontSize: 11 }}>
+                      ({sportAthletes.get(s.id)?.length ?? 0})
+                    </span>
                   </span>
                 ))}
               </div>
@@ -243,6 +316,9 @@ export default function CrossSport() {
                     {SPORTS.map((s) => (
                       <th key={s.id} className="num">
                         {s.name}
+                        <span className="faint" style={{ fontWeight: 400, marginLeft: 4 }}>
+                          ({sportAthletes.get(s.id)?.length ?? 0})
+                        </span>
                       </th>
                     ))}
                   </tr>
@@ -289,7 +365,7 @@ export default function CrossSport() {
           sub="Across every sport, on the shared battery"
         >
           <select
-            value={athleteId}
+            value={effectiveAthleteId}
             onChange={(e) => setAthleteId(e.target.value)}
             style={{ width: "100%", marginBottom: 12 }}
           >
@@ -341,7 +417,7 @@ export default function CrossSport() {
                 <tr>
                   <th>Test</th>
                   <th className="num">Athlete</th>
-                  <th className="num">Pop. avg</th>
+                  <th className="num">Pool avg</th>
                   <th className="num">Best</th>
                 </tr>
               </thead>
@@ -371,10 +447,10 @@ export default function CrossSport() {
 
         <div style={{ gridColumn: "span 2" }}>
           {mode === "pct" ? (
-            <Card title="Overall athleticism leaderboard" sub="Every athlete ranked by composite index, regardless of sport">
+            <Card title="Overall athleticism leaderboard" sub="Ranked by composite index within the filtered pool">
               <RankTable
                 rows={ranked.map((r) => ({ athlete: r.athlete, value: round(r.score, 0) }))}
-                athleteId={athleteId}
+                athleteId={effectiveAthleteId}
                 selfRank={rankIdx}
                 valueLabel="Index"
                 valueMax={100}
@@ -383,7 +459,7 @@ export default function CrossSport() {
           ) : (
             <Card
               title="Raw leaderboard"
-              sub={`${rawTest?.name} across every athlete, all sports`}
+              sub={`${rawTest?.name} across the filtered pool`}
               actions={
                 <select value={rawTestId} onChange={(e) => setRawTestId(e.target.value)}>
                   {tests.map((t) => (
@@ -396,7 +472,7 @@ export default function CrossSport() {
             >
               <RankTable
                 rows={rawBoard}
-                athleteId={athleteId}
+                athleteId={effectiveAthleteId}
                 selfRank={rawRankIdx}
                 valueLabel={rawTest?.unit || "value"}
                 valueMax={Math.max(...rawBoard.map((r) => r.value), 1)}
@@ -409,6 +485,56 @@ export default function CrossSport() {
     </>
   );
 }
+
+// ── Filter bar sub-component ────────────────────────────────────────────────
+
+function FilterBar({
+  genderFilter,
+  setGenderFilter,
+  ageBandFilter,
+  setAgeBandFilter,
+  availableBands,
+}: {
+  genderFilter: "all" | Gender;
+  setGenderFilter: (v: "all" | Gender) => void;
+  ageBandFilter: string;
+  setAgeBandFilter: (v: string) => void;
+  availableBands: string[];
+}) {
+  return (
+    <div className="row" style={{ gap: 8 }}>
+      <div className="field">
+        <label>Gender</label>
+        <select
+          value={genderFilter}
+          onChange={(e) => setGenderFilter(e.target.value as "all" | Gender)}
+          style={{ padding: "6px 10px", fontSize: 12.5 }}
+        >
+          <option value="all">All</option>
+          <option value="M">Men</option>
+          <option value="F">Women</option>
+        </select>
+      </div>
+      <div className="field">
+        <label>Age band</label>
+        <select
+          value={ageBandFilter}
+          onChange={(e) => setAgeBandFilter(e.target.value)}
+          style={{ padding: "6px 10px", fontSize: 12.5 }}
+        >
+          <option value="all">All ages</option>
+          {availableBands.map((b) => (
+            <option key={b} value={b}>
+              {b} yrs
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+// ── Squad overview sub-component ────────────────────────────────────────────
 
 function SquadOverview({
   sportSummary,
@@ -432,18 +558,23 @@ function SquadOverview({
             <span className="row" style={{ gap: 8 }}>
               <span className="dot" style={{ background: SPORT_COLORS[s.sport.id] }} />
               <span style={{ fontWeight: 650 }}>{s.sport.name}</span>
+              {s.count === 0 && <span className="faint" style={{ fontSize: 11 }}>(no data)</span>}
             </span>
-            <span style={{ fontWeight: 700 }}>{s.avgComposite}</span>
+            <span style={{ fontWeight: 700 }}>{s.count > 0 ? s.avgComposite : "—"}</span>
           </div>
-          <Bar value={s.avgComposite} max={maxComposite} color={SPORT_COLORS[s.sport.id]} />
+          {s.count > 0 && <Bar value={s.avgComposite} max={maxComposite} color={SPORT_COLORS[s.sport.id]} />}
           <div className="faint" style={{ fontSize: 11.5, marginTop: 6 }}>
-            {s.count} athletes · {s.men}M / {s.women}F · avg age {s.avgAge}
+            {s.count > 0
+              ? `${s.count} athletes · ${s.men}M / ${s.women}F · avg age ${s.avgAge}`
+              : "No athletes in this filter"}
           </div>
         </div>
       ))}
     </Card>
   );
 }
+
+// ── Rank table sub-component ────────────────────────────────────────────────
 
 function RankTable({
   rows,
@@ -463,7 +594,6 @@ function RankTable({
   const renderRow = (r: { athlete: Athlete; value: number }, i: number) => {
     const isSelf = r.athlete.id === athleteId;
     const sid = r.athlete.profiles[0]?.sportId ?? "";
-    // For lower-is-better metrics, fill the bar inversely so leaders look fuller.
     const barVal = lowerIsBetter ? valueMax - r.value + 0.0001 : r.value;
     return (
       <tr key={r.athlete.id}>
