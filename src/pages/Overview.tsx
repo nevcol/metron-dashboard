@@ -18,6 +18,37 @@ import { useStore } from "../data/store";
 import { ageOn, formatMonth } from "../lib/format";
 import { round } from "../lib/stats";
 
+const svgProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+const IconUsers = () => (
+  <svg {...svgProps}>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.2a3 3 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-3-4.9" />
+  </svg>
+);
+const IconPulse = () => (
+  <svg {...svgProps}>
+    <path d="M3 12h4l2 6 4-14 2 8h6" />
+  </svg>
+);
+const IconTrophy = () => (
+  <svg {...svgProps}>
+    <path d="M7 4h10v5a5 5 0 0 1-10 0V4ZM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M9 19h6M10 15.5V19M14 15.5V19" />
+  </svg>
+);
+const IconClock = () => (
+  <svg {...svgProps}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+);
+
 export default function Overview() {
   const { athletes, testResults, competitionResults, resetData } = useStore();
 
@@ -69,10 +100,10 @@ export default function Overview() {
       />
 
       <div className="grid cols-4">
-        <StatCard label="Athletes tracked" value={athletes.length} />
-        <StatCard label="Test records" value={totalTests} />
-        <StatCard label="Competition results" value={competitionResults.length} />
-        <StatCard label="Average age" value={avgAge} unit="yrs" />
+        <StatCard label="Athletes tracked" value={athletes.length} icon={<IconUsers />} />
+        <StatCard label="Test records" value={totalTests} icon={<IconPulse />} />
+        <StatCard label="Competition results" value={competitionResults.length} icon={<IconTrophy />} />
+        <StatCard label="Average age" value={avgAge} unit="yrs" icon={<IconClock />} />
       </div>
 
       <div className="grid cols-3 mt-16">

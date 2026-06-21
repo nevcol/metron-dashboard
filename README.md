@@ -7,6 +7,9 @@ athlete stands among peers, and to training load and competition results.
 
 > The name comes from the Greek *métron* — "measure".
 
+**Live demo:** https://nevcol.github.io/metron-dashboard/ (published from CI on
+each push to the development/main branches via GitHub Pages).
+
 ## What it does
 
 - **Per-sport athlete profiles.** Each athlete carries a separate profile for

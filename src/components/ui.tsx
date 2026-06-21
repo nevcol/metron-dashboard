@@ -36,14 +36,17 @@ export function StatCard({
   value,
   unit,
   delta,
+  icon,
 }: {
   label: string;
   value: string | number;
   unit?: string;
   delta?: { text: string; dir: "up" | "down" | "flat" };
+  icon?: ReactNode;
 }) {
   return (
     <div className="card stat">
+      {icon && <span className="stat-ico">{icon}</span>}
       <div className="value">
         {value}
         {unit && <span style={{ fontSize: 16, color: "var(--text-dim)" }}> {unit}</span>}
