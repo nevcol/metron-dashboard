@@ -25,6 +25,10 @@ each push to the development/main branches via GitHub Pages).
   against peers of the same gender and five-year age band within the sport.
 - **Results tracking.** Season-best rankings per event and the progression of
   competition marks over the season.
+- **Cross-sport comparison.** Compare athletes across sports on a shared
+  test battery (tennis, athletics, swimming). Normalize to percentiles for
+  fair comparison despite different units. Filter by gender and 5-year age
+  band to scope the comparison pool.
 - **Periodization & load.** Weekly training load through the macrocycle phases,
   charted against test progress, plus a squad-level view of how average training
   load relates to test gains.
