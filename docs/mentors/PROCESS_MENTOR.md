@@ -76,13 +76,23 @@ Triggers: every push, every PR, manual dispatch.
 - **`HashRouter` in `src/main.tsx`** handles deep links (e.g. `/#/athletes/123`) on static hosting where there is no server to handle URL rewrites. BrowserRouter would produce 404s for any direct navigation to a sub-route.
 - `npm run build` produces `dist/` — this is the artifact the Actions workflow uploads and deploys.
 
-### Note on extra workflows
+### One workflow, deliberately
 
-There are two additional workflow files that are effectively inert for this project:
-- `blank.yml` — a starter "Hello, world!" CI template; not relevant.
-- `jekyll-gh-pages.yml` — a Jekyll deployment template added early; superseded by `deploy.yml`.
+`deploy.yml` is the **only** workflow, and that is a hard rule. Two starter
+templates used to live alongside it and both deployed to the `github-pages`
+environment:
+- `blank.yml` — a "Hello, world!" CI template (no-op).
+- `jekyll-gh-pages.yml` — a Jekyll template that tried to build the repo as a
+  Jekyll site and publish *that* to Pages.
 
-The file that matters is `deploy.yml`.
+On every push to `main` all three ran, and the two Pages deployers raced for the
+same environment. This caused the deploy to fail and could have published the
+wrong artifact. Both stray files were deleted on 2026-06-22; `deploy.yml` now
+also calls `actions/configure-pages@v5` with `enablement: true` so a
+disabled Pages site self-heals instead of hard-failing.
+
+**Never add a second workflow that deploys to `github-pages`.** Extend
+`deploy.yml` instead.
 
 ---
 

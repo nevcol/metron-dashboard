@@ -4,6 +4,31 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-06-22 — Fix Pages deploy: one workflow, self-healing (branch `claude/fix-pages-deploy`)
+
+**What:** After PR #3 merged to `main`, the GitHub Pages deploy failed. Two
+separate workflows (`deploy.yml` and the leftover `jekyll-gh-pages.yml`) were
+both publishing to the `github-pages` environment on every push and racing each
+other; both also reported `Not Found` because the repo's Pages site had become
+disabled.
+
+**Fix:**
+- Deleted the two stray workflows `.github/workflows/blank.yml` (a no-op
+  "Hello, world!" template) and `.github/workflows/jekyll-gh-pages.yml` (a
+  Jekyll publisher that conflicted with our Vite build). `deploy.yml` is now the
+  single source of truth for CI and deployment.
+- Hardened `deploy.yml`: added `actions/configure-pages@v5` with
+  `enablement: true` to the build job so a disabled Pages site is re-enabled
+  automatically instead of hard-failing, and trimmed the stale
+  `claude/athlete-testing-dashboard-ommj6u` push trigger.
+- Repo owner re-enabled Pages with source "GitHub Actions" (one-time manual
+  setting that only the owner can change).
+
+**Why:** A single deploy path removes the race condition, and the self-heal step
+means an accidentally-disabled Pages site no longer blocks releases.
+
+---
+
 ## 2026-06-22 — Cross-sport: gender & age-band filters (PR #3, branch `claude/intersport-comparison`)
 
 **What:** Added **Gender** (All / Men / Women) and **Age band** (5-year bands)

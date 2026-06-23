@@ -1,14 +1,19 @@
 name: Build & Deploy
 
-# `build` runs on every push/PR and is the CI gate (type-check + Vite build).
-# `deploy` publishes the live demo to GitHub Pages on pushes to the
-# development/main branches. Pages must be enabled once under
-# Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Single source of truth for CI and the live demo. There must be no other
+# workflow that deploys to the `github-pages` environment — two workflows
+# racing for the same environment is what broke the deploy before.
+#
+# - `build`  runs on every push and PR (the CI gate: type-check + Vite build).
+#            On non-PR events it also enables Pages and uploads the artifact.
+# - `deploy` publishes to GitHub Pages on pushes to main and manual runs only.
+#
+# Pages source must be "GitHub Actions" (Settings → Pages). The build job calls
+# configure-pages with `enablement: true`, so it self-heals if Pages is off.
 on:
   push:
     branches:
       - main
-      - claude/athlete-testing-dashboard-ommj6u
   pull_request:
   workflow_dispatch:
 
@@ -29,6 +34,13 @@ jobs:
       - run: npm ci
       - name: Type-check and build
         run: npm run build
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+        with:
+          # Enable Pages automatically if it isn't already, so a disabled
+          # Pages site no longer hard-fails the deploy.
+          enablement: true
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
