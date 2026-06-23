@@ -4,6 +4,38 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-06-23 — Periodization plan builder (branch `claude/periodization-builder`)
+
+**What:** Turned the Periodization page from a read-only analytics view into a
+macrocycle **plan builder**. An Analyze / Build-plan `seg` toggle in the header
+switches between the existing charts and the new builder.
+
+**Build mode:**
+- **Guided generator** (`generatePlan`): pick a start week, per-phase lengths
+  (Preparation / Pre-Competition / Competition / Transition), a peak weekly load,
+  and an optional "deload every 4th build week" toggle. The generator interpolates
+  a fraction-of-peak ramp per phase (`PHASE_SHAPE`) — high-volume Preparation peak,
+  intensify then taper into Competition, recover in Transition — mirroring the
+  philosophy of the synthetic dataset's load values.
+- **Manual edits:** every generated week is editable in a grid (change its phase
+  or planned load); a phase-coloured bar chart previews the load curve live.
+- **Persistence:** a new `saveTrainingPlan(athleteId, sportId, weeks)` store
+  mutation **upserts by `weekStart`** — it updates the weeks the plan covers
+  (preserving any logged `actualLoad`) and appends new weeks, leaving the rest of
+  the athlete's history untouched. So building a forward plan never erases the two
+  years of seeded training history that the Analyze view depends on.
+
+**Why:** Metron could measure and analyse load but not *prescribe* it. This is the
+first step toward authoring training programs on the platform; saved plans flow
+straight back into the planned-vs-actual adherence table and the load-vs-progress
+chart.
+
+**Verification:** `tsc -b` clean; `npm run build` succeeds; generator output
+checked numerically (correct Monday alignment, exact 7-day stepping, sensible
+periodized curve with visible deloads). See `docs/TEST_VERIFICATION_PR5.md`.
+
+---
+
 ## 2026-06-22 — Fix Pages deploy: one workflow, self-healing (branch `claude/fix-pages-deploy`)
 
 **What:** After PR #3 merged to `main`, the GitHub Pages deploy failed. Two

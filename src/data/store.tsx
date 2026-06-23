@@ -11,6 +11,7 @@ import type {
   AthleteProfile,
   CompetitionResult,
   Dataset,
+  PeriodizationPhase,
   TestResult,
   TrainingWeek,
 } from "../types";
@@ -22,6 +23,16 @@ interface StoreValue extends Dataset {
   addAthlete: (a: Omit<Athlete, "id" | "profiles"> & { profile: Omit<AthleteProfile, "id" | "athleteId"> }) => void;
   addTestResult: (r: Omit<TestResult, "id">) => void;
   addCompetitionResult: (r: Omit<CompetitionResult, "id">) => void;
+  /**
+   * Replace an athlete's training plan for one sport with a fresh set of weeks.
+   * Existing logged `actualLoad` is preserved for any week whose `weekStart`
+   * matches, so building/editing a plan never wipes completed-training history.
+   */
+  saveTrainingPlan: (
+    athleteId: string,
+    sportId: string,
+    weeks: { weekStart: string; phase: PeriodizationPhase; plannedLoad: number }[],
+  ) => void;
   resetData: () => void;
 }
 
@@ -77,6 +88,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             { ...r, id: `cr-manual-${Date.now()}` },
           ],
         })),
+      saveTrainingPlan: (athleteId, sportId, weeks) =>
+        setDataset((d) => {
+          // Upsert by weekStart: update the weeks the plan covers (keeping any
+          // logged actualLoad), append weeks that are new, and leave every other
+          // week of history untouched.
+          const byKey = new Map(weeks.map((w) => [w.weekStart, w]));
+          const updated = d.trainingWeeks.map((w) => {
+            if (w.athleteId === athleteId && w.sportId === sportId && byKey.has(w.weekStart)) {
+              const next = byKey.get(w.weekStart)!;
+              byKey.delete(w.weekStart);
+              return { ...w, phase: next.phase, plannedLoad: Math.round(next.plannedLoad) };
+            }
+            return w;
+          });
+          const stamp = Date.now();
+          let i = 0;
+          const added: TrainingWeek[] = [...byKey.values()].map((w) => ({
+            id: `tw-plan-${athleteId}-${sportId}-${i++}-${stamp}`,
+            athleteId,
+            sportId,
+            weekStart: w.weekStart,
+            phase: w.phase,
+            plannedLoad: Math.round(w.plannedLoad),
+            actualLoad: 0,
+          }));
+          return { ...d, trainingWeeks: [...updated, ...added] };
+        }),
       resetData: () => {
         localStorage.removeItem(STORAGE_KEY);
         setDataset(generateDataset());

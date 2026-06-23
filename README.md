@@ -29,9 +29,12 @@ each push to the development/main branches via GitHub Pages).
   test battery (tennis, athletics, swimming). Normalize to percentiles for
   fair comparison despite different units. Filter by gender and 5-year age
   band to scope the comparison pool.
-- **Periodization & load.** Weekly training load through the macrocycle phases,
-  charted against test progress, plus a squad-level view of how average training
-  load relates to test gains.
+- **Periodization & load.** Two modes. *Analyze* charts weekly training load
+  through the macrocycle phases against test progress, plus a squad-level view of
+  how average training load relates to test gains. *Build plan* is a macrocycle
+  builder: set phase lengths and a peak weekly load, auto-shape a periodized load
+  curve (progressive build, deloads, taper into competition), fine-tune any week,
+  and save the plan to the athlete.
 
 ## Tech
 

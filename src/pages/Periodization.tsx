@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Bar,
   CartesianGrid,
+  Cell,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -13,12 +14,12 @@ import {
   ZAxis,
 } from "recharts";
 import { PageHead } from "../components/Layout";
-import { Card } from "../components/ui";
+import { Bar as LoadBar, Card } from "../components/ui";
 import { SPORTS, TEST_BY_ID, testsForSport } from "../data/catalog";
 import { athleteTrainingWeeks, useStore } from "../data/store";
-import { formatMonth } from "../lib/format";
-import { correlationStrength, linearRegression, round } from "../lib/stats";
-import type { PeriodizationPhase, TestResult } from "../types";
+import { formatDate, formatMonth } from "../lib/format";
+import { correlationStrength, linearRegression, mean, round } from "../lib/stats";
+import type { Athlete, PeriodizationPhase, TestResult } from "../types";
 
 const PHASE_COLOR: Record<PeriodizationPhase, string> = {
   Preparation: "#0ea5e9",
@@ -27,8 +28,18 @@ const PHASE_COLOR: Record<PeriodizationPhase, string> = {
   Transition: "#22c55e",
 };
 
+const PHASE_ORDER: PeriodizationPhase[] = [
+  "Preparation",
+  "Pre-Competition",
+  "Competition",
+  "Transition",
+];
+
+type Mode = "analyze" | "build";
+
 export default function Periodization() {
   const { athletes, testResults, trainingWeeks } = useStore();
+  const [mode, setMode] = useState<Mode>("analyze");
   const [sportId, setSportId] = useState(SPORTS[0].id);
   const sportAthletes = useMemo(
     () => athletes.filter((a) => a.profiles.some((p) => p.sportId === sportId)),
@@ -81,24 +92,16 @@ export default function Periodization() {
       cur.n += 1;
       agg.set(w.phase, cur);
     }
-    const order: PeriodizationPhase[] = [
-      "Preparation",
-      "Pre-Competition",
-      "Competition",
-      "Transition",
-    ];
-    return order
-      .filter((p) => agg.has(p))
-      .map((p) => {
-        const a = agg.get(p)!;
-        return {
-          phase: p,
-          weeks: a.n,
-          avgPlanned: Math.round(a.planned / a.n),
-          avgActual: Math.round(a.actual / a.n),
-          adherence: round((a.actual / a.planned) * 100, 0),
-        };
-      });
+    return PHASE_ORDER.filter((p) => agg.has(p)).map((p) => {
+      const a = agg.get(p)!;
+      return {
+        phase: p,
+        weeks: a.n,
+        avgPlanned: Math.round(a.planned / a.n),
+        avgActual: Math.round(a.actual / a.n),
+        adherence: a.planned ? round((a.actual / a.planned) * 100, 0) : 0,
+      };
+    });
   }, [athlete, trainingWeeks, sportId]);
 
   // Squad-level: does higher training load relate to bigger test gains?
@@ -147,9 +150,21 @@ export default function Periodization() {
     <>
       <PageHead
         title="Periodization & Load"
-        subtitle="The training plan in context: weekly load through the macrocycle phases, and how that load tracks against test progress and squad-wide gains."
+        subtitle={
+          mode === "analyze"
+            ? "The training plan in context: weekly load through the macrocycle phases, and how that load tracks against test progress and squad-wide gains."
+            : "Build a macrocycle: lay out training phases across a timeline, auto-shape a periodized load curve, then fine-tune any week and save the plan to the athlete."
+        }
         actions={
-          <div className="row">
+          <div className="row" style={{ gap: 10 }}>
+            <div className="seg">
+              <button className={mode === "analyze" ? "active" : ""} onClick={() => setMode("analyze")}>
+                Analyze
+              </button>
+              <button className={mode === "build" ? "active" : ""} onClick={() => setMode("build")}>
+                Build plan
+              </button>
+            </div>
             <select value={sportId} onChange={(e) => setSportId(e.target.value)}>
               {SPORTS.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -168,144 +183,448 @@ export default function Periodization() {
         }
       />
 
-      <Card
-        title="Load vs test progress"
-        sub={`Monthly average training load (bars) against ${testType?.name} (${testType?.unit || "index"}, line) for ${athlete.name}`}
-        actions={
-          <select value={testId} onChange={(e) => setTestId(e.target.value)}>
-            {testsForSport(sportId).map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.shortName}
-              </option>
+      {mode === "build" ? (
+        <PlanBuilder key={`${athlete.id}-${sportId}`} athlete={athlete} sportId={sportId} />
+      ) : (
+        <>
+          <Card
+            title="Load vs test progress"
+            sub={`Monthly average training load (bars) against ${testType?.name} (${testType?.unit || "index"}, line) for ${athlete.name}`}
+            actions={
+              <select value={testId} onChange={(e) => setTestId(e.target.value)}>
+                {testsForSport(sportId).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.shortName}
+                  </option>
+                ))}
+              </select>
+            }
+          >
+            <ResponsiveContainer width="100%" height={280}>
+              <ComposedChart data={monthly} margin={{ left: -12, right: 4, top: 8 }}>
+                <CartesianGrid stroke="#243456" vertical={false} />
+                <XAxis dataKey="month" stroke="#6b7da0" fontSize={11} tickLine={false} />
+                <YAxis yAxisId="load" stroke="#6b7da0" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis
+                  yAxisId="test"
+                  orientation="right"
+                  stroke="#6b7da0"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={["auto", "auto"]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#15203a",
+                    border: "1px solid #243456",
+                    borderRadius: 8,
+                    color: "#e8eefc",
+                  }}
+                />
+                <Bar yAxisId="load" dataKey="load" radius={[3, 3, 0, 0]} fill="#243456" />
+                <Line
+                  yAxisId="test"
+                  type="monotone"
+                  dataKey="test"
+                  stroke="#0ea5e9"
+                  strokeWidth={2.5}
+                  connectNulls
+                  dot={{ r: 3 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="legend mt-8">
+              <span className="item">
+                <span className="dot" style={{ background: "#243456" }} /> Monthly load
+              </span>
+              <span className="item">
+                <span className="dot" style={{ background: "#0ea5e9" }} /> {testType?.shortName}
+              </span>
+            </div>
+          </Card>
+
+          <div className="grid cols-3 mt-16">
+            <div style={{ gridColumn: "span 2" }}>
+              <Card title="Phase breakdown" sub={`Macrocycle structure for ${athlete.name}`}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Phase</th>
+                      <th className="num">Weeks</th>
+                      <th className="num">Avg planned</th>
+                      <th className="num">Avg actual</th>
+                      <th className="num">Adherence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {phaseSummary.map((p) => (
+                      <tr key={p.phase}>
+                        <td>
+                          <span className="row" style={{ gap: 8 }}>
+                            <span className="dot" style={{ background: PHASE_COLOR[p.phase] }} />
+                            <span style={{ fontWeight: 600 }}>{p.phase}</span>
+                          </span>
+                        </td>
+                        <td className="num">{p.weeks}</td>
+                        <td className="num">{p.avgPlanned}</td>
+                        <td className="num">{p.avgActual}</td>
+                        <td className="num" style={{ color: p.adherence >= 90 ? "var(--good)" : "var(--warn)" }}>
+                          {p.adherence}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
+
+            <Card title="Load → gains" sub="Squad: avg load vs test change">
+              <div style={{ textAlign: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 22, fontWeight: 700 }}>r = {round(loadVsGain.fit.r, 2)}</span>
+                <span className="faint" style={{ fontSize: 12, marginLeft: 8 }}>
+                  {correlationStrength(loadVsGain.fit.r)}
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={210}>
+                <ScatterChart margin={{ left: -10, right: 8, top: 4, bottom: 4 }}>
+                  <CartesianGrid stroke="#243456" />
+                  <XAxis
+                    type="number"
+                    dataKey="x"
+                    name="Avg load"
+                    stroke="#6b7da0"
+                    fontSize={10}
+                    domain={["auto", "auto"]}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="y"
+                    name="Gain %"
+                    stroke="#6b7da0"
+                    fontSize={10}
+                    domain={["auto", "auto"]}
+                  />
+                  <ZAxis range={[50, 50]} />
+                  <Tooltip
+                    cursor={{ strokeDasharray: "3 3" }}
+                    contentStyle={{
+                      background: "#15203a",
+                      border: "1px solid #243456",
+                      borderRadius: 8,
+                      color: "#e8eefc",
+                    }}
+                    formatter={(v: number) => round(v, 1)}
+                  />
+                  <Scatter data={loadVsGain.line} line={{ stroke: "#f97316", strokeWidth: 2 }} shape={() => <g />} />
+                  <Scatter data={loadVsGain.pts} fill="#22c55e" />
+                </ScatterChart>
+              </ResponsiveContainer>
+              <p className="faint" style={{ fontSize: 12, marginTop: 6 }}>
+                Each point is an athlete: mean weekly load vs % change in {testType?.shortName}.
+              </p>
+            </Card>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+// ── Plan builder ────────────────────────────────────────────────────────────
+
+type DraftWeek = { weekStart: string; phase: PeriodizationPhase; plannedLoad: number };
+
+interface PlanSettings {
+  startDate: string;
+  lengths: Record<PeriodizationPhase, number>;
+  peakLoad: number;
+  deload: boolean;
+}
+
+// Fraction-of-peak ramp [start, end] interpolated across each phase. Mirrors the
+// dataset's philosophy: high-volume Preparation peak, intensify then taper into
+// Competition, recover in Transition.
+const PHASE_SHAPE: Record<PeriodizationPhase, [number, number]> = {
+  Preparation: [0.75, 1.0],
+  "Pre-Competition": [0.95, 0.82],
+  Competition: [0.7, 0.62],
+  Transition: [0.38, 0.34],
+};
+
+/** Monday on or after a date, as an ISO yyyy-mm-dd string (UTC). */
+function mondayOnOrAfter(d: Date): string {
+  const u = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  u.setUTCDate(u.getUTCDate() + ((8 - u.getUTCDay()) % 7));
+  return u.toISOString().slice(0, 10);
+}
+
+/** The ISO date of week `i` (0-based) after an ISO start date. */
+function isoWeek(start: string, i: number): string {
+  const d = new Date(start + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + i * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+function generatePlan(s: PlanSettings): DraftWeek[] {
+  const weeks: DraftWeek[] = [];
+  let idx = 0;
+  for (const phase of PHASE_ORDER) {
+    const n = Math.max(0, Math.round(s.lengths[phase]));
+    const [a, b] = PHASE_SHAPE[phase];
+    for (let k = 0; k < n; k++) {
+      const t = n <= 1 ? 0 : k / (n - 1);
+      let frac = a + (b - a) * t;
+      // A deload every 4th week of the accumulation/intensification phases.
+      if (s.deload && (idx + 1) % 4 === 0 && (phase === "Preparation" || phase === "Pre-Competition")) {
+        frac *= 0.82;
+      }
+      weeks.push({ weekStart: isoWeek(s.startDate, idx), phase, plannedLoad: Math.max(0, Math.round(s.peakLoad * frac)) });
+      idx++;
+    }
+  }
+  return weeks;
+}
+
+const DEFAULT_SETTINGS: PlanSettings = {
+  startDate: mondayOnOrAfter(new Date()),
+  lengths: { Preparation: 8, "Pre-Competition": 4, Competition: 4, Transition: 2 },
+  peakLoad: 650,
+  deload: true,
+};
+
+function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }) {
+  const { saveTrainingPlan } = useStore();
+  const [settings, setSettings] = useState<PlanSettings>(DEFAULT_SETTINGS);
+  const [draft, setDraft] = useState<DraftWeek[]>(() => generatePlan(DEFAULT_SETTINGS));
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  const totalWeeks = PHASE_ORDER.reduce((s, p) => s + Math.max(0, Math.round(settings.lengths[p])), 0);
+  const peakInDraft = draft.reduce((m, w) => Math.max(m, w.plannedLoad), 1);
+
+  const regenerate = (next: PlanSettings) => {
+    setSettings(next);
+    setDraft(generatePlan(next));
+    setSavedAt(null);
+  };
+  const setLength = (phase: PeriodizationPhase, raw: string) => {
+    const v = Math.max(0, Math.min(52, Math.round(Number(raw) || 0)));
+    regenerate({ ...settings, lengths: { ...settings.lengths, [phase]: v } });
+  };
+  const editWeek = (i: number, patch: Partial<DraftWeek>) => {
+    setDraft((d) => d.map((w, j) => (j === i ? { ...w, ...patch } : w)));
+    setSavedAt(null);
+  };
+
+  const summary = useMemo(() => {
+    const byPhase = PHASE_ORDER.map((p) => {
+      const ws = draft.filter((w) => w.phase === p);
+      return { phase: p, weeks: ws.length, avg: ws.length ? Math.round(mean(ws.map((w) => w.plannedLoad))) : 0 };
+    });
+    const range =
+      draft.length > 0
+        ? `${formatDate(draft[0].weekStart)} → ${formatDate(draft[draft.length - 1].weekStart)}`
+        : "—";
+    return { byPhase, range, total: draft.length, totalLoad: draft.reduce((s, w) => s + w.plannedLoad, 0) };
+  }, [draft]);
+
+  const preview = draft.map((w, i) => ({
+    label: `W${i + 1}`,
+    week: formatDate(w.weekStart),
+    load: w.plannedLoad,
+    phase: w.phase,
+  }));
+
+  return (
+    <div className="grid cols-3" style={{ alignItems: "start" }}>
+      <Card title="Plan setup" sub="Guided generator — set the shape, then fine-tune below">
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Start (week of)</label>
+          <input
+            type="date"
+            value={settings.startDate}
+            onChange={(e) => regenerate({ ...settings, startDate: e.target.value })}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label className="faint" style={{ fontSize: 12, fontWeight: 600 }}>
+            Phase lengths (weeks)
+          </label>
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+            {PHASE_ORDER.map((p) => (
+              <div className="row between" key={p}>
+                <span className="row" style={{ gap: 8 }}>
+                  <span className="dot" style={{ background: PHASE_COLOR[p] }} />
+                  <span style={{ fontSize: 13 }}>{p}</span>
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={52}
+                  value={settings.lengths[p]}
+                  onChange={(e) => setLength(p, e.target.value)}
+                  style={{ width: 64, textAlign: "right" }}
+                />
+              </div>
             ))}
-          </select>
-        }
-      >
-        <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart data={monthly} margin={{ left: -12, right: 4, top: 8 }}>
-            <CartesianGrid stroke="#243456" vertical={false} />
-            <XAxis dataKey="month" stroke="#6b7da0" fontSize={11} tickLine={false} />
-            <YAxis yAxisId="load" stroke="#6b7da0" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis
-              yAxisId="test"
-              orientation="right"
-              stroke="#6b7da0"
-              fontSize={11}
-              tickLine={false}
-              axisLine={false}
-              domain={["auto", "auto"]}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "#15203a",
-                border: "1px solid #243456",
-                borderRadius: 8,
-                color: "#e8eefc",
-              }}
-            />
-            <Bar yAxisId="load" dataKey="load" radius={[3, 3, 0, 0]} fill="#243456" />
-            <Line
-              yAxisId="test"
-              type="monotone"
-              dataKey="test"
-              stroke="#0ea5e9"
-              strokeWidth={2.5}
-              connectNulls
-              dot={{ r: 3 }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-        <div className="legend mt-8">
-          <span className="item">
-            <span className="dot" style={{ background: "#243456" }} /> Monthly load
-          </span>
-          <span className="item">
-            <span className="dot" style={{ background: "#0ea5e9" }} /> {testType?.shortName}
-          </span>
+          </div>
+        </div>
+
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Peak weekly load</label>
+          <input
+            type="number"
+            min={0}
+            value={settings.peakLoad}
+            onChange={(e) => regenerate({ ...settings, peakLoad: Math.max(0, Math.round(Number(e.target.value) || 0)) })}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <label className="row" style={{ gap: 8, marginBottom: 14, cursor: "pointer", fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={settings.deload}
+            onChange={(e) => regenerate({ ...settings, deload: e.target.checked })}
+          />
+          Deload every 4th build week
+        </label>
+
+        <button className="btn" style={{ width: "100%" }} onClick={() => regenerate(settings)}>
+          Regenerate curve
+        </button>
+
+        <div style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+          <div className="row between" style={{ fontSize: 12.5 }}>
+            <span className="faint">Total</span>
+            <span style={{ fontWeight: 600 }}>{summary.total} weeks · {totalWeeks ? "" : ""}{summary.range}</span>
+          </div>
+          {summary.byPhase.filter((b) => b.weeks > 0).map((b) => (
+            <div className="row between" key={b.phase} style={{ fontSize: 12.5, marginTop: 6 }}>
+              <span className="row" style={{ gap: 8 }}>
+                <span className="dot" style={{ background: PHASE_COLOR[b.phase] }} />
+                {b.phase}
+              </span>
+              <span className="faint">{b.weeks} wk · avg {b.avg}</span>
+            </div>
+          ))}
         </div>
       </Card>
 
-      <div className="grid cols-3 mt-16">
-        <div style={{ gridColumn: "span 2" }}>
-          <Card title="Phase breakdown" sub={`Macrocycle structure for ${athlete.name}`}>
+      <div style={{ gridColumn: "span 2" }}>
+        <Card
+          title="Planned load curve"
+          sub={`Macrocycle for ${athlete.name} — bars coloured by phase`}
+          actions={
+            <button
+              className="btn"
+              disabled={draft.length === 0}
+              onClick={() => {
+                saveTrainingPlan(athlete.id, sportId, draft);
+                setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
+              }}
+            >
+              Save plan
+            </button>
+          }
+        >
+          {draft.length === 0 ? (
+            <div className="empty">Set phase lengths above to generate a plan.</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={250}>
+                <ComposedChart data={preview} margin={{ left: -12, right: 4, top: 8 }}>
+                  <CartesianGrid stroke="#243456" vertical={false} />
+                  <XAxis dataKey="label" stroke="#6b7da0" fontSize={10} tickLine={false} interval={0} />
+                  <YAxis stroke="#6b7da0" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: "#15203a", border: "1px solid #243456", borderRadius: 8, color: "#e8eefc" }}
+                    formatter={(v: number) => [v, "Load"]}
+                    labelFormatter={(l: string, p: any[]) => {
+                      const row = p?.[0]?.payload as { week: string; phase: string } | undefined;
+                      return row ? `${l} · ${row.week} · ${row.phase}` : l;
+                    }}
+                  />
+                  <Bar dataKey="load" radius={[3, 3, 0, 0]}>
+                    {preview.map((row, i) => (
+                      <Cell key={i} fill={PHASE_COLOR[row.phase]} />
+                    ))}
+                  </Bar>
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div className="legend mt-8">
+                {PHASE_ORDER.map((p) => (
+                  <span className="item" key={p}>
+                    <span className="dot" style={{ background: PHASE_COLOR[p] }} />
+                    {p}
+                  </span>
+                ))}
+              </div>
+              {savedAt && (
+                <div className="row" style={{ marginTop: 10 }}>
+                  <span className="pill accent">Saved at {savedAt}</span>
+                  <span className="faint" style={{ fontSize: 12 }}>
+                    Plan written to {athlete.name}. Switch to Analyze to see it against test progress.
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+
+        {draft.length > 0 && (
+          <div className="mt-16">
+          <Card title="Weekly plan" sub="Fine-tune any week — change its phase or planned load">
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: 48 }}>Wk</th>
+                  <th>Start</th>
                   <th>Phase</th>
-                  <th className="num">Weeks</th>
-                  <th className="num">Avg planned</th>
-                  <th className="num">Avg actual</th>
-                  <th className="num">Adherence</th>
+                  <th className="num">Planned</th>
+                  <th style={{ width: 160 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {phaseSummary.map((p) => (
-                  <tr key={p.phase}>
+                {draft.map((w, i) => (
+                  <tr key={w.weekStart}>
+                    <td style={{ fontWeight: 700, color: "var(--text-faint)" }}>{i + 1}</td>
+                    <td>{formatDate(w.weekStart)}</td>
                     <td>
-                      <span className="row" style={{ gap: 8 }}>
-                        <span className="dot" style={{ background: PHASE_COLOR[p.phase] }} />
-                        <span style={{ fontWeight: 600 }}>{p.phase}</span>
-                      </span>
+                      <select
+                        value={w.phase}
+                        onChange={(e) => editWeek(i, { phase: e.target.value as PeriodizationPhase })}
+                        style={{ padding: "4px 8px", fontSize: 12.5 }}
+                      >
+                        {PHASE_ORDER.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
                     </td>
-                    <td className="num">{p.weeks}</td>
-                    <td className="num">{p.avgPlanned}</td>
-                    <td className="num">{p.avgActual}</td>
-                    <td className="num" style={{ color: p.adherence >= 90 ? "var(--good)" : "var(--warn)" }}>
-                      {p.adherence}%
+                    <td className="num">
+                      <input
+                        type="number"
+                        min={0}
+                        value={w.plannedLoad}
+                        onChange={(e) => editWeek(i, { plannedLoad: Math.max(0, Math.round(Number(e.target.value) || 0)) })}
+                        style={{ width: 80, textAlign: "right" }}
+                      />
+                    </td>
+                    <td>
+                      <LoadBar value={w.plannedLoad} max={peakInDraft} color={PHASE_COLOR[w.phase]} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </Card>
-        </div>
-
-        <Card title="Load → gains" sub="Squad: avg load vs test change">
-          <div style={{ textAlign: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 22, fontWeight: 700 }}>r = {round(loadVsGain.fit.r, 2)}</span>
-            <span className="faint" style={{ fontSize: 12, marginLeft: 8 }}>
-              {correlationStrength(loadVsGain.fit.r)}
-            </span>
           </div>
-          <ResponsiveContainer width="100%" height={210}>
-            <ScatterChart margin={{ left: -10, right: 8, top: 4, bottom: 4 }}>
-              <CartesianGrid stroke="#243456" />
-              <XAxis
-                type="number"
-                dataKey="x"
-                name="Avg load"
-                stroke="#6b7da0"
-                fontSize={10}
-                domain={["auto", "auto"]}
-              />
-              <YAxis
-                type="number"
-                dataKey="y"
-                name="Gain %"
-                stroke="#6b7da0"
-                fontSize={10}
-                domain={["auto", "auto"]}
-              />
-              <ZAxis range={[50, 50]} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                contentStyle={{
-                  background: "#15203a",
-                  border: "1px solid #243456",
-                  borderRadius: 8,
-                  color: "#e8eefc",
-                }}
-                formatter={(v: number) => round(v, 1)}
-              />
-              <Scatter data={loadVsGain.line} line={{ stroke: "#f97316", strokeWidth: 2 }} shape={() => <g />} />
-              <Scatter data={loadVsGain.pts} fill="#22c55e" />
-            </ScatterChart>
-          </ResponsiveContainer>
-          <p className="faint" style={{ fontSize: 12, marginTop: 6 }}>
-            Each point is an athlete: mean weekly load vs % change in {testType?.shortName}.
-          </p>
-        </Card>
+        )}
       </div>
-    </>
+    </div>
   );
 }
