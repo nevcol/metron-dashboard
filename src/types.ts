@@ -95,6 +95,7 @@ export type StrengthPhase =
   | "Transition";
 
 export type TrainingQuality =
+  | "Anatomical Adaptation"
   | "Max Strength"
   | "Strength Endurance"
   | "Hypertrophy"

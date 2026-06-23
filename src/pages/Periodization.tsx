@@ -68,6 +68,7 @@ const QUALITY_GROUPS: { label: string; qualities: TrainingQuality[] }[] = [
   {
     label: "Strength",
     qualities: [
+      "Anatomical Adaptation",
       "Max Strength",
       "Strength Endurance",
       "Hypertrophy",
@@ -97,6 +98,7 @@ const QUALITY_GROUPS: { label: string; qualities: TrainingQuality[] }[] = [
 const ALL_QUALITIES: TrainingQuality[] = QUALITY_GROUPS.flatMap((g) => g.qualities);
 
 const QUALITY_COLOR: Record<TrainingQuality, string> = {
+  "Anatomical Adaptation": "#d97706",
   "Max Strength": "#ef4444",
   "Strength Endurance": "#f97316",
   "Hypertrophy": "#f43f5e",
