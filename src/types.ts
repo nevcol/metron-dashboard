@@ -87,6 +87,33 @@ export type PeriodizationPhase =
   | "Competition"
   | "Transition";
 
+export type StrengthPhase =
+  | "Accumulation"
+  | "Intensification"
+  | "Realization"
+  | "Deload"
+  | "Transition";
+
+export type TrainingQuality =
+  | "Anatomical Adaptation"
+  | "Max Strength"
+  | "Strength Endurance"
+  | "Hypertrophy"
+  | "Core Stability"
+  | "Reactive Strength"
+  | "Power"
+  | "Speed"
+  | "Speed Endurance"
+  | "Agility"
+  | "Aerobic Base"
+  | "Aerobic Capacity"
+  | "Anaerobic Capacity"
+  | "General Conditioning"
+  | "Mobility"
+  | "Technique"
+  | "Recovery"
+  | "Competition";
+
 /** A weekly block of an athlete's periodized training plan. */
 export interface TrainingWeek {
   id: string;
@@ -94,6 +121,9 @@ export interface TrainingWeek {
   sportId: string;
   weekStart: string;
   phase: PeriodizationPhase;
+  strengthPhase?: StrengthPhase;
+  primaryQuality?: TrainingQuality;
+  secondaryQualities?: TrainingQuality[];
   /** Planned training load in arbitrary units (e.g. session-RPE * minutes / 100). */
   plannedLoad: number;
   /** Actual completed load. */
