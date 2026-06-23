@@ -12,7 +12,9 @@ import type {
   CompetitionResult,
   Dataset,
   PeriodizationPhase,
+  StrengthPhase,
   TestResult,
+  TrainingQuality,
   TrainingWeek,
 } from "../types";
 import { generateDataset } from "./generate";
@@ -31,7 +33,14 @@ interface StoreValue extends Dataset {
   saveTrainingPlan: (
     athleteId: string,
     sportId: string,
-    weeks: { weekStart: string; phase: PeriodizationPhase; plannedLoad: number }[],
+    weeks: {
+      weekStart: string;
+      phase: PeriodizationPhase;
+      plannedLoad: number;
+      strengthPhase?: StrengthPhase;
+      primaryQuality?: TrainingQuality;
+      secondaryQualities?: TrainingQuality[];
+    }[],
   ) => void;
   resetData: () => void;
 }
@@ -98,7 +107,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             if (w.athleteId === athleteId && w.sportId === sportId && byKey.has(w.weekStart)) {
               const next = byKey.get(w.weekStart)!;
               byKey.delete(w.weekStart);
-              return { ...w, phase: next.phase, plannedLoad: Math.round(next.plannedLoad) };
+              return {
+                ...w,
+                phase: next.phase,
+                plannedLoad: Math.round(next.plannedLoad),
+                strengthPhase: next.strengthPhase,
+                primaryQuality: next.primaryQuality,
+                secondaryQualities: next.secondaryQualities,
+              };
             }
             return w;
           });
@@ -112,6 +128,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             phase: w.phase,
             plannedLoad: Math.round(w.plannedLoad),
             actualLoad: 0,
+            strengthPhase: w.strengthPhase,
+            primaryQuality: w.primaryQuality,
+            secondaryQualities: w.secondaryQualities,
           }));
           return { ...d, trainingWeeks: [...updated, ...added] };
         }),
