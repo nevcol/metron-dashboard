@@ -249,12 +249,12 @@ export default function Correlations() {
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <ScatterChart margin={{ left: -8, right: 12, top: 8, bottom: 8 }}>
-                <CartesianGrid stroke="#243456" />
+                <CartesianGrid stroke="var(--chart-grid)" />
                 <XAxis
                   type="number"
                   dataKey="x"
                   name={xVar.label}
-                  stroke="#6b7da0"
+                  stroke="var(--chart-axis)"
                   fontSize={11}
                   domain={["auto", "auto"]}
                 />
@@ -262,7 +262,7 @@ export default function Correlations() {
                   type="number"
                   dataKey="y"
                   name={yVar.label}
-                  stroke="#6b7da0"
+                  stroke="var(--chart-axis)"
                   fontSize={11}
                   domain={["auto", "auto"]}
                 />
@@ -270,15 +270,15 @@ export default function Correlations() {
                 <Tooltip
                   cursor={{ strokeDasharray: "3 3" }}
                   contentStyle={{
-                    background: "#15203a",
-                    border: "1px solid #243456",
+                    background: "var(--tooltip-bg)",
+                    border: "1px solid var(--tooltip-border)",
                     borderRadius: 8,
-                    color: "#e8eefc",
+                    color: "var(--tooltip-text)",
                   }}
                   formatter={(v: number) => round(v, 2)}
                 />
                 <Scatter data={scatter.line} line={{ stroke: "#f97316", strokeWidth: 2 }} shape={() => <g />} />
-                <Scatter data={scatter.pts} fill="#0ea5e9" />
+                <Scatter data={scatter.pts} fill="var(--series-1)" />
               </ScatterChart>
             </ResponsiveContainer>
             <p className="faint" style={{ fontSize: 12.5, marginTop: 8 }}>
@@ -298,7 +298,7 @@ export default function Correlations() {
                 <span
                   style={{
                     fontWeight: 700,
-                    color: ins.r >= 0 ? "#f97316" : "#0ea5e9",
+                    color: ins.r >= 0 ? "#f97316" : "var(--series-1)",
                   }}
                 >
                   {round(ins.r, 2)}

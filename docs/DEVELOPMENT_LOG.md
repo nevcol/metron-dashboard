@@ -4,6 +4,108 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-07-01 — Dual themes: premium "Noir" + white/gold/grey "Ivory" (branch `claude/dashboard-glassmorphism-style-ecqupc`)
+
+**What:** Introduced a two-theme system on top of the liquid-glass restyle. The
+dark graphite/violet look is now the "Noir" theme; a new "Ivory" theme delivers
+a white/gold/grey luxury variant. A Noir/Ivory segmented toggle lives at the
+bottom of the sidebar, persisted to `localStorage` under `metron.theme` (a UI
+preference key, deliberately separate from the dataset store — the "mutations go
+through the store" rule applies to athlete data, not chrome preferences).
+
+**Mechanism:**
+- `index.html` sets `data-theme` on `<html>` from `localStorage` in an inline
+  script before first paint (no flash of wrong theme). `Layout.tsx` owns the
+  toggle state, mirrors it to `document.documentElement.dataset.theme`, keeps
+  the `theme-color` meta in sync, and persists it.
+- All theming is CSS-variable-driven. `:root` holds Noir; a
+  `:root[data-theme="ivory"]` block overrides surfaces, text, brand accents
+  (gold `#a17d1a` scale), gradients, glass sheen/edge tokens, glows, shadows,
+  and semantic status colors. A handful of component rules that hardcoded
+  white-on-gradient text or purple-tinted tracks get explicit ivory overrides.
+- **Charts are themed through CSS variables passed directly to Recharts props**
+  (`stroke="var(--chart-grid)"`, `fill="var(--series-1)"`, tooltip
+  `contentStyle` vars). Chromium/Firefox resolve `var()` in SVG presentation
+  attributes — verified empirically in this session before adopting the
+  approach. New chart tokens: `--series-1`, `--chart-grid`, `--chart-axis`,
+  `--chart-axis-strong`, `--tooltip-bg/border/text`.
+- Glow shadows use an `rgba(var(--glow), α)` triplet pattern so one variable
+  re-colours every glow per theme.
+
+**Color discipline:** The primary series colors were validated (lightness band,
+chroma floor, contrast ≥ 3:1 vs the card surface) rather than eyeballed —
+Noir's purple snapped to `#9d7bf5`, Ivory's gold to `#a17d1a`. Categorical maps
+(`SPORT_COLORS`, `CATEGORY_COLORS`, `PHASE_COLOR`, `STRENGTH_PHASE_COLOR`,
+`QUALITY_COLOR`, `AVATAR_COLORS`) remain fixed hex values in both themes —
+identity colors must not change when the theme does.
+
+**Why:** Requested premium/high-end elevation plus a white/gold/grey option.
+Doing it as a variable-driven theme system (rather than a palette swap) means
+future themes are an override block, not another sweep through seven pages.
+
+---
+
+## 2026-07-01 — Glassmorphism gray/purple re-theme (branch `claude/dashboard-glassmorphism-style-ecqupc`)
+
+**What:** Re-skinned the entire dashboard's visual theme from the blue/indigo/purple
+brand palette to a gray/purple glassmorphism look. This is a chrome-only change —
+no components, routes, data flow, or page structure were touched.
+
+**Theme (`src/index.css`):**
+- Brand variables shifted from blue-led (`--accent: #38bdf8` sky blue) to a
+  violet-to-slate scale (`--accent: #a78bfa`, `--accent-2: #8b5cf6`,
+  `--accent-3: #64748b`). `--grad` now sweeps violet → slate gray instead of
+  blue → indigo → purple.
+- Surfaces (`--bg`, `--panel`, `--panel-2`, `--border`, text hierarchy) recast as
+  dark, purple-tinted grays instead of navy/blue-black.
+- `.card` and `.sidebar` blur increased (16px → 22px, 14px → 20px) with added
+  `saturate()` and a subtle inset top highlight for a stronger glass sheen.
+- Buttons, focus rings, pills, scrollbars, and the body's ambient radial glows
+  all recolored to match.
+
+**Charts and per-page literals:** Recharts components pass color as literal
+props (not CSS vars), so the same shift was applied by hand across
+`Overview.tsx`, `Correlations.tsx`, `PeerComparison.tsx`, `CrossSport.tsx`,
+`Periodization.tsx`, `Results.tsx`, `AthleteProfile.tsx`:
+- Chart chrome (grid lines, tooltip background/border/text, axis strokes/ticks)
+  moved from blue-slate hex literals to the same gray-purple family.
+- The single-series "primary" data color used for trend lines, radar self-series,
+  and default scatter points moved from the old blue accent to the new purple
+  accent (`#a78bfa`).
+
+**Deliberately left unchanged:** `CATEGORY_COLORS`, `SPORT_COLORS`,
+`PHASE_COLOR`, `STRENGTH_PHASE_COLOR`, `QUALITY_COLOR`, and the `AVATAR_COLORS`
+palette in `src/data/catalog.ts` / `src/pages/Periodization.tsx` /
+`src/components/ui.tsx`. These are categorical/semantic color-coding (they
+distinguish sports, test categories, phases, or individual athletes from one
+another) rather than brand chrome, and the Engineering Mentor doc explicitly
+warns against duplicating or destabilizing these maps.
+
+**Why:** Requested visual refresh to a gray/purple glassmorphism style. Scoped
+to theme chrome and shared chart styling so the change is purely cosmetic and
+carries zero risk to the stats/derived-state architecture.
+
+**Follow-up — "liquid glass" pass:** Pushed the frosted look further toward an
+Apple-style liquid-glass aesthetic, still `index.css`-only:
+- New reusable tokens: `--glass-sheen` (diagonal specular streak),
+  `--glass-tint` (corner violet light), `--glass-edge` (layered inset
+  edge-lighting box-shadow).
+- `.card` gains `position: relative; isolation: isolate`, deeper
+  `backdrop-filter: blur(30px) saturate(185%)`, the `--glass-edge` inset
+  lighting, and a `::before` (z-index -1, `pointer-events: none`) painting the
+  sheen + tint on the glass surface beneath content. Hover lifts 1px.
+- A fixed, slow-drifting `body::before` layer with three soft violet/slate orbs
+  (`liquidDrift` keyframes, 28s) gives the background a subtle living motion;
+  gated behind `prefers-reduced-motion: reduce`.
+- Glossier interactive glass: buttons get a top-half `::before` highlight + white
+  text on the gradient; the `.seg` control and its active tab, `select`/`input`,
+  `.stat-ico`, `.pill.accent`, and the active nav link all pick up blur and/or
+  inset top-highlights.
+- Panels made a touch more translucent (lower alpha) so more of the drifting
+  backdrop refracts through the glass.
+
+---
+
 ## 2026-06-23 — Periodization plan builder (branch `claude/periodization-builder`)
 
 **What:** Turned the Periodization page from a read-only analytics view into a

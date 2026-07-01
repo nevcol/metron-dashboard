@@ -302,11 +302,11 @@ export default function Periodization() {
           >
             <ResponsiveContainer width="100%" height={280}>
               <ComposedChart data={monthly} margin={{ left: -12, right: 4, top: 8 }}>
-                <CartesianGrid stroke="#243456" vertical={false} />
-                <XAxis dataKey="month" stroke="#6b7da0" fontSize={11} tickLine={false} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+                <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} />
                 <YAxis
                   yAxisId="load"
-                  stroke="#6b7da0"
+                  stroke="var(--chart-axis)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -314,7 +314,7 @@ export default function Periodization() {
                 <YAxis
                   yAxisId="test"
                   orientation="right"
-                  stroke="#6b7da0"
+                  stroke="var(--chart-axis)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -322,18 +322,18 @@ export default function Periodization() {
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "#15203a",
-                    border: "1px solid #243456",
+                    background: "var(--tooltip-bg)",
+                    border: "1px solid var(--tooltip-border)",
                     borderRadius: 8,
-                    color: "#e8eefc",
+                    color: "var(--tooltip-text)",
                   }}
                 />
-                <Bar yAxisId="load" dataKey="load" radius={[3, 3, 0, 0]} fill="#243456" />
+                <Bar yAxisId="load" dataKey="load" radius={[3, 3, 0, 0]} fill="var(--chart-grid)" />
                 <Line
                   yAxisId="test"
                   type="monotone"
                   dataKey="test"
-                  stroke="#0ea5e9"
+                  stroke="var(--series-1)"
                   strokeWidth={2.5}
                   connectNulls
                   dot={{ r: 3 }}
@@ -342,10 +342,10 @@ export default function Periodization() {
             </ResponsiveContainer>
             <div className="legend mt-8">
               <span className="item">
-                <span className="dot" style={{ background: "#243456" }} /> Monthly load
+                <span className="dot" style={{ background: "var(--chart-grid)" }} /> Monthly load
               </span>
               <span className="item">
-                <span className="dot" style={{ background: "#0ea5e9" }} /> {testType?.shortName}
+                <span className="dot" style={{ background: "var(--series-1)" }} /> {testType?.shortName}
               </span>
             </div>
           </Card>
@@ -405,12 +405,12 @@ export default function Periodization() {
               </div>
               <ResponsiveContainer width="100%" height={210}>
                 <ScatterChart margin={{ left: -10, right: 8, top: 4, bottom: 4 }}>
-                  <CartesianGrid stroke="#243456" />
+                  <CartesianGrid stroke="var(--chart-grid)" />
                   <XAxis
                     type="number"
                     dataKey="x"
                     name="Avg load"
-                    stroke="#6b7da0"
+                    stroke="var(--chart-axis)"
                     fontSize={10}
                     domain={["auto", "auto"]}
                   />
@@ -418,7 +418,7 @@ export default function Periodization() {
                     type="number"
                     dataKey="y"
                     name="Gain %"
-                    stroke="#6b7da0"
+                    stroke="var(--chart-axis)"
                     fontSize={10}
                     domain={["auto", "auto"]}
                   />
@@ -426,10 +426,10 @@ export default function Periodization() {
                   <Tooltip
                     cursor={{ strokeDasharray: "3 3" }}
                     contentStyle={{
-                      background: "#15203a",
-                      border: "1px solid #243456",
+                      background: "var(--tooltip-bg)",
+                      border: "1px solid var(--tooltip-border)",
                       borderRadius: 8,
-                      color: "#e8eefc",
+                      color: "var(--tooltip-text)",
                     }}
                     formatter={(v: number) => round(v, 1)}
                   />
@@ -767,21 +767,21 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
             <>
               <ResponsiveContainer width="100%" height={250}>
                 <ComposedChart data={preview} margin={{ left: -12, right: 4, top: 8 }}>
-                  <CartesianGrid stroke="#243456" vertical={false} />
+                  <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                   <XAxis
                     dataKey="label"
-                    stroke="#6b7da0"
+                    stroke="var(--chart-axis)"
                     fontSize={10}
                     tickLine={false}
                     interval={0}
                   />
-                  <YAxis stroke="#6b7da0" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip
                     contentStyle={{
-                      background: "#15203a",
-                      border: "1px solid #243456",
+                      background: "var(--tooltip-bg)",
+                      border: "1px solid var(--tooltip-border)",
                       borderRadius: 8,
-                      color: "#e8eefc",
+                      color: "var(--tooltip-text)",
                     }}
                     formatter={(v: number) => [v, "Load"]}
                     labelFormatter={(l: string, p: any[]) => {

@@ -176,10 +176,10 @@ export default function Results() {
           )}
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={progression} margin={{ left: -14, right: 8, top: 6 }}>
-              <CartesianGrid stroke="#243456" vertical={false} />
-              <XAxis dataKey="month" stroke="#6b7da0" fontSize={11} tickLine={false} />
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+              <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} />
               <YAxis
-                stroke="#6b7da0"
+                stroke="var(--chart-axis)"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
@@ -187,10 +187,10 @@ export default function Results() {
               />
               <Tooltip
                 contentStyle={{
-                  background: "#15203a",
-                  border: "1px solid #243456",
+                  background: "var(--tooltip-bg)",
+                  border: "1px solid var(--tooltip-border)",
                   borderRadius: 8,
-                  color: "#e8eefc",
+                  color: "var(--tooltip-text)",
                 }}
               />
               <Line
