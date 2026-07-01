@@ -33,8 +33,9 @@ each push to the development/main branches via GitHub Pages).
   through the macrocycle phases against test progress, plus a squad-level view of
   how average training load relates to test gains. *Build plan* is a macrocycle
   builder: set phase lengths and a peak weekly load, auto-shape a periodized load
-  curve (progressive build, deloads, taper into competition), fine-tune any week,
-  and save the plan to the athlete.
+  curve (progressive build, deloads, taper into competition), assign strength
+  phases and training qualities, schedule competitions (A/B/C priority) onto the
+  timeline, fine-tune any week, and save the plan to the athlete.
 - **Liquid-glass UI with two themes.** Frosted, refractive panels with specular
   highlights float over a slowly drifting ambient backdrop. Ships with two
   looks — **Noir** (graphite/violet) and **Ivory** (white/gold/grey) — switched

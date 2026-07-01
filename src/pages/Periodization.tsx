@@ -5,6 +5,7 @@ import {
   Cell,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -19,7 +20,14 @@ import { SPORTS, TEST_BY_ID, testsForSport } from "../data/catalog";
 import { athleteTrainingWeeks, useStore } from "../data/store";
 import { formatDate, formatMonth } from "../lib/format";
 import { correlationStrength, linearRegression, mean, round } from "../lib/stats";
-import type { Athlete, PeriodizationPhase, StrengthPhase, TestResult, TrainingQuality } from "../types";
+import type {
+  Athlete,
+  CompetitionPriority,
+  PeriodizationPhase,
+  StrengthPhase,
+  TestResult,
+  TrainingQuality,
+} from "../types";
 
 // ── Phase colours ─────────────────────────────────────────────────────────────
 
@@ -123,6 +131,16 @@ const PHASE_DEFAULT_QUALITY: Record<PeriodizationPhase, TrainingQuality> = {
   "Pre-Competition": "Power",
   Competition: "Speed",
   Transition: "Recovery",
+};
+
+// ── Competition priorities ────────────────────────────────────────────────────
+
+const PRIORITY_ORDER: CompetitionPriority[] = ["A", "B", "C"];
+
+const PRIORITY_COLOR: Record<CompetitionPriority, string> = {
+  A: "#f43f5e",
+  B: "#fbbf24",
+  C: "#94a3b8",
 };
 
 // ── Page modes ────────────────────────────────────────────────────────────────
@@ -464,6 +482,13 @@ type DraftWeek = {
   secondaryQualities: TrainingQuality[];
 };
 
+type DraftComp = {
+  key: string;
+  date: string;
+  name: string;
+  priority: CompetitionPriority;
+};
+
 interface PlanSettings {
   startDate: string;
   lengths: Record<PeriodizationPhase, number>;
@@ -489,6 +514,18 @@ function isoWeek(start: string, i: number): string {
   const d = new Date(start + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + i * 7);
   return d.toISOString().slice(0, 10);
+}
+
+function isoDayOffset(start: string, days: number): string {
+  const d = new Date(start + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Competitions whose date falls inside the 7-day week beginning at weekStart. */
+function compsInWeek(comps: DraftComp[], weekStart: string): DraftComp[] {
+  const end = isoDayOffset(weekStart, 6);
+  return comps.filter((c) => c.date && c.date >= weekStart && c.date <= end);
 }
 
 function generatePlan(s: PlanSettings): DraftWeek[] {
@@ -556,11 +593,19 @@ function QualitySelect({
 }
 
 function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }) {
-  const { saveTrainingPlan } = useStore();
+  const { saveTrainingPlan, savePlannedCompetitions, plannedCompetitions } = useStore();
   const [settings, setSettings] = useState<PlanSettings>(DEFAULT_SETTINGS);
   const [draft, setDraft] = useState<DraftWeek[]>(() => generatePlan(DEFAULT_SETTINGS));
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [weekView, setWeekView] = useState<WeekView>("calendar");
+  // Seed from any previously saved schedule for this athlete+sport (component is
+  // keyed by both, so this initializer re-runs on switch).
+  const [comps, setComps] = useState<DraftComp[]>(() =>
+    plannedCompetitions
+      .filter((c) => c.athleteId === athlete.id && c.sportId === sportId)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((c) => ({ key: c.id, date: c.date, name: c.name, priority: c.priority })),
+  );
 
   const peakInDraft = draft.reduce((m, w) => Math.max(m, w.plannedLoad), 1);
 
@@ -575,6 +620,24 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
   };
   const editWeek = (i: number, patch: Partial<DraftWeek>) => {
     setDraft((d) => d.map((w, j) => (j === i ? { ...w, ...patch } : w)));
+    setSavedAt(null);
+  };
+  const addComp = () => {
+    // Default a new competition to the start of the Competition phase.
+    const defaultDate =
+      draft.find((w) => w.phase === "Competition")?.weekStart ?? settings.startDate;
+    setComps((c) => [
+      ...c,
+      { key: `dc-${Date.now()}-${c.length}`, date: defaultDate, name: "", priority: "A" },
+    ]);
+    setSavedAt(null);
+  };
+  const editComp = (key: string, patch: Partial<DraftComp>) => {
+    setComps((c) => c.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+    setSavedAt(null);
+  };
+  const removeComp = (key: string) => {
+    setComps((c) => c.filter((x) => x.key !== key));
     setSavedAt(null);
   };
   const toggleSecondary = (i: number, q: TrainingQuality) => {
@@ -613,8 +676,30 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
     phase: w.phase,
   }));
 
+  // Competitions positioned on the plan's week axis for the chart overlay.
+  const compMarkers = useMemo(
+    () =>
+      comps
+        .filter((c) => c.date)
+        .map((c) => ({
+          ...c,
+          idx: draft.findIndex(
+            (w) => c.date >= w.weekStart && c.date <= isoDayOffset(w.weekStart, 6),
+          ),
+        }))
+        .filter((c) => c.idx >= 0),
+    [comps, draft],
+  );
+
   const saveDraft = () => {
     saveTrainingPlan(athlete.id, sportId, draft);
+    savePlannedCompetitions(
+      athlete.id,
+      sportId,
+      comps
+        .filter((c) => c.date)
+        .map((c) => ({ date: c.date, name: c.name.trim() || "Competition", priority: c.priority })),
+    );
     setSavedAt(
       new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
     );
@@ -722,6 +807,99 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
         <div
           style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}
         >
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <label className="faint" style={{ fontSize: 12, fontWeight: 600 }}>
+              Competitions
+            </label>
+            <button
+              className="btn"
+              style={{ fontSize: 11, padding: "3px 10px" }}
+              onClick={addComp}
+            >
+              + Add
+            </button>
+          </div>
+          {comps.length === 0 ? (
+            <p className="faint" style={{ fontSize: 11.5, margin: 0 }}>
+              No competitions scheduled. Add key dates to see them on the plan.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {comps.map((c) => {
+                const inPlan =
+                  !c.date ||
+                  draft.some(
+                    (w) => c.date >= w.weekStart && c.date <= isoDayOffset(w.weekStart, 6),
+                  );
+                return (
+                  <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                      <span
+                        className="dot"
+                        style={{ background: PRIORITY_COLOR[c.priority], flex: "0 0 auto" }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Competition name"
+                        value={c.name}
+                        onChange={(e) => editComp(c.key, { name: e.target.value })}
+                        style={{ flex: 1, minWidth: 0, fontSize: 12, padding: "4px 8px" }}
+                      />
+                      <select
+                        value={c.priority}
+                        onChange={(e) =>
+                          editComp(c.key, { priority: e.target.value as CompetitionPriority })
+                        }
+                        title="Priority: A = key comp, B = important, C = training"
+                        style={{ fontSize: 12, padding: "4px 6px" }}
+                      >
+                        {PRIORITY_ORDER.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => removeComp(c.key)}
+                        title="Remove"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "var(--text-faint)",
+                          cursor: "pointer",
+                          fontSize: 14,
+                          padding: "0 2px",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", paddingLeft: 13 }}>
+                      <input
+                        type="date"
+                        value={c.date}
+                        onChange={(e) => editComp(c.key, { date: e.target.value })}
+                        style={{ flex: 1, fontSize: 12, padding: "4px 8px" }}
+                      />
+                      {!inPlan && (
+                        <span
+                          title="This date falls outside the planned weeks"
+                          style={{ fontSize: 11, color: "var(--warn, #fbbf24)" }}
+                        >
+                          outside plan
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{ marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 12 }}
+        >
           <div className="row between" style={{ fontSize: 12.5 }}>
             <span className="faint">Total</span>
             <span style={{ fontWeight: 600 }}>{summary.total} weeks</span>
@@ -766,7 +944,7 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
           ) : (
             <>
               <ResponsiveContainer width="100%" height={250}>
-                <ComposedChart data={preview} margin={{ left: -12, right: 4, top: 8 }}>
+                <ComposedChart data={preview} margin={{ left: -12, right: 4, top: 20 }}>
                   <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
                   <XAxis
                     dataKey="label"
@@ -796,6 +974,20 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
                       <Cell key={i} fill={PHASE_COLOR[row.phase]} />
                     ))}
                   </Bar>
+                  {compMarkers.map((c) => (
+                    <ReferenceLine
+                      key={c.key}
+                      x={`W${c.idx + 1}`}
+                      stroke={PRIORITY_COLOR[c.priority]}
+                      strokeDasharray="4 3"
+                      label={{
+                        value: c.name.trim() || "Comp",
+                        position: "top",
+                        fill: PRIORITY_COLOR[c.priority],
+                        fontSize: 10,
+                      }}
+                    />
+                  ))}
                 </ComposedChart>
               </ResponsiveContainer>
               <div className="legend mt-8">
@@ -805,13 +997,22 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
                     {p}
                   </span>
                 ))}
+                {compMarkers.length > 0 &&
+                  PRIORITY_ORDER.filter((p) => compMarkers.some((c) => c.priority === p)).map(
+                    (p) => (
+                      <span className="item" key={p}>
+                        <span className="dot" style={{ background: PRIORITY_COLOR[p] }} />
+                        {p}-comp
+                      </span>
+                    ),
+                  )}
               </div>
               {savedAt && (
                 <div className="row" style={{ marginTop: 10, gap: 10 }}>
                   <span className="pill accent">Saved at {savedAt}</span>
                   <span className="faint" style={{ fontSize: 12 }}>
-                    Plan written to {athlete.name}. Switch to Analyze to see it against test
-                    progress.
+                    Plan and competition schedule written to {athlete.name}. Switch to
+                    Analyze to see it against test progress.
                   </span>
                 </div>
               )}
@@ -848,6 +1049,7 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
               {weekView === "calendar" ? (
                 <CalendarView
                   draft={draft}
+                  comps={comps}
                   peakLoad={peakInDraft}
                   onEditWeek={editWeek}
                   onToggleSecondary={toggleSecondary}
@@ -878,7 +1080,18 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
                           >
                             {i + 1}
                           </td>
-                          <td style={{ fontSize: 12 }}>{formatDate(w.weekStart)}</td>
+                          <td style={{ fontSize: 12 }}>
+                            {formatDate(w.weekStart)}
+                            {compsInWeek(comps, w.weekStart).map((c) => (
+                              <span
+                                key={c.key}
+                                title={`${c.name.trim() || "Competition"} · ${c.priority} · ${formatDate(c.date)}`}
+                                style={{ marginLeft: 6, cursor: "default" }}
+                              >
+                                🏆
+                              </span>
+                            ))}
+                          </td>
                           <td>
                             <select
                               value={w.phase}
@@ -958,11 +1171,13 @@ function PlanBuilder({ athlete, sportId }: { athlete: Athlete; sportId: string }
 
 function CalendarView({
   draft,
+  comps,
   peakLoad,
   onEditWeek,
   onToggleSecondary,
 }: {
   draft: DraftWeek[];
+  comps: DraftComp[];
   peakLoad: number;
   onEditWeek: (i: number, patch: Partial<DraftWeek>) => void;
   onToggleSecondary: (i: number, q: TrainingQuality) => void;
@@ -1013,6 +1228,7 @@ function CalendarView({
               <WeekCard
                 key={week.weekStart}
                 week={week}
+                weekComps={compsInWeek(comps, week.weekStart)}
                 weekNum={idx + 1}
                 peakLoad={peakLoad}
                 onEdit={(patch) => onEditWeek(idx, patch)}
@@ -1030,12 +1246,14 @@ function CalendarView({
 
 function WeekCard({
   week,
+  weekComps,
   weekNum,
   peakLoad,
   onEdit,
   onToggleSecondary,
 }: {
   week: DraftWeek;
+  weekComps: DraftComp[];
   weekNum: number;
   peakLoad: number;
   onEdit: (patch: Partial<DraftWeek>) => void;
@@ -1066,6 +1284,31 @@ function WeekCard({
           {formatDate(week.weekStart)}
         </span>
       </div>
+
+      {weekComps.map((c) => (
+        <div
+          key={c.key}
+          title={`${c.priority}-priority competition · ${formatDate(c.date)}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 10.5,
+            fontWeight: 700,
+            color: PRIORITY_COLOR[c.priority],
+            background: PRIORITY_COLOR[c.priority] + "18",
+            border: `1px solid ${PRIORITY_COLOR[c.priority]}44`,
+            borderRadius: 6,
+            padding: "3px 7px",
+          }}
+        >
+          <span>🏆</span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {c.name.trim() || "Competition"}
+          </span>
+          <span style={{ marginLeft: "auto", opacity: 0.8 }}>{c.priority}</span>
+        </div>
+      ))}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
         <span

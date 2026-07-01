@@ -4,6 +4,39 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-07-01 — Competition scheduling on the plan (branch `claude/plan-competitions`)
+
+**What:** The plan builder can now schedule **competitions** (name + date +
+A/B/C priority) onto a macrocycle.
+
+- New `PlannedCompetition` domain type and a `plannedCompetitions` collection on
+  the dataset (optional field — older persisted datasets are normalised to `[]`
+  by the store, no migration needed).
+- New `savePlannedCompetitions(athleteId, sportId, comps)` store mutation —
+  replaces the schedule for one athlete+sport, leaves everyone else's intact.
+- **Plan setup card:** a Competitions section with add/remove rows (name, date,
+  priority select, priority-coloured dot) and an "outside plan" warning when a
+  date doesn't fall inside the planned weeks.
+- **Load curve:** dashed priority-coloured `ReferenceLine` at the week of each
+  competition, labelled with the competition name; A/B/C legend entries appear
+  only when used.
+- **Calendar view:** priority-coloured 🏆 banner pill on the week card that
+  contains the competition. **List view:** 🏆 marker next to the week start with
+  a hover tooltip.
+- Saving the plan writes both the weeks and the competition schedule; the
+  builder re-seeds its schedule from the store, so saved competitions reload
+  when you come back to the same athlete+sport.
+
+**Why:** A macrocycle is built backwards from the competitions it targets. With
+the dates on the plan, the taper/peak weeks can be sanity-checked against what
+the athlete is actually preparing for. (Follow-up idea: auto-taper the generated
+curve into A-priority competitions.)
+
+**Verification:** `tsc -b` clean; `npm run build` succeeds. See
+`docs/TEST_VERIFICATION_PR8.md`.
+
+---
+
 ## 2026-07-01 — Dual themes: premium "Noir" + white/gold/grey "Ivory" (branch `claude/dashboard-glassmorphism-style-ecqupc`)
 
 **What:** Introduced a two-theme system on top of the liquid-glass restyle. The
