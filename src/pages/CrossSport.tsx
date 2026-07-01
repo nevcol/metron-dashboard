@@ -271,9 +271,9 @@ export default function CrossSport() {
             <Card title="Physical profile by sport" sub="Mean percentile per shared test, across the filtered pool">
               <ResponsiveContainer width="100%" height={330}>
                 <RadarChart data={sportRadar} outerRadius={120}>
-                  <PolarGrid stroke="#322c48" />
-                  <PolarAngleAxis dataKey="test" tick={{ fill: "#a4b2d0", fontSize: 11 }} />
-                  <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#6b7aa0", fontSize: 10 }} angle={90} />
+                  <PolarGrid stroke="var(--chart-grid)" />
+                  <PolarAngleAxis dataKey="test" tick={{ fill: "var(--chart-axis-strong)", fontSize: 11 }} />
+                  <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "var(--chart-axis)", fontSize: 10 }} angle={90} />
                   {SPORTS.map((s) => (
                     <Radar
                       key={s.id}
@@ -286,7 +286,7 @@ export default function CrossSport() {
                     />
                   ))}
                   <Tooltip
-                    contentStyle={{ background: "#1c1726", border: "1px solid #322c48", borderRadius: 8, color: "#f1eef9" }}
+                    contentStyle={{ background: "var(--tooltip-bg)", border: "1px solid var(--tooltip-border)", borderRadius: 8, color: "var(--tooltip-text)" }}
                   />
                 </RadarChart>
               </ResponsiveContainer>
@@ -389,9 +389,9 @@ export default function CrossSport() {
             <>
               <ResponsiveContainer width="100%" height={290}>
                 <RadarChart data={athleteRadar} outerRadius={100}>
-                  <PolarGrid stroke="#322c48" />
-                  <PolarAngleAxis dataKey="test" tick={{ fill: "#a4b2d0", fontSize: 11 }} />
-                  <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#6b7aa0", fontSize: 10 }} angle={90} />
+                  <PolarGrid stroke="var(--chart-grid)" />
+                  <PolarAngleAxis dataKey="test" tick={{ fill: "var(--chart-axis-strong)", fontSize: 11 }} />
+                  <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "var(--chart-axis)", fontSize: 10 }} angle={90} />
                   <Radar
                     dataKey="percentile"
                     stroke={SPORT_COLORS[athlete.profiles[0]?.sportId ?? "tennis"]}
@@ -400,7 +400,7 @@ export default function CrossSport() {
                     strokeWidth={2}
                   />
                   <Tooltip
-                    contentStyle={{ background: "#1c1726", border: "1px solid #322c48", borderRadius: 8, color: "#f1eef9" }}
+                    contentStyle={{ background: "var(--tooltip-bg)", border: "1px solid var(--tooltip-border)", borderRadius: 8, color: "var(--tooltip-text)" }}
                   />
                 </RadarChart>
               </ResponsiveContainer>

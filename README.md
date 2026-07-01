@@ -35,9 +35,11 @@ each push to the development/main branches via GitHub Pages).
   builder: set phase lengths and a peak weekly load, auto-shape a periodized load
   curve (progressive build, deloads, taper into competition), fine-tune any week,
   and save the plan to the athlete.
-- **Glassmorphism UI.** Frosted, translucent panels with layered blur sit over a
-  gray/purple gradient backdrop. The accent palette, buttons, charts, and focus
-  states all draw from the same gray-to-violet scale for a cohesive look.
+- **Liquid-glass UI with two themes.** Frosted, refractive panels with specular
+  highlights float over a slowly drifting ambient backdrop. Ships with two
+  looks — **Noir** (graphite/violet) and **Ivory** (white/gold/grey) — switched
+  from the sidebar and remembered across visits. Charts, glows, tooltips, and
+  focus states all re-colour through CSS variables per theme.
 
 ## Tech
 

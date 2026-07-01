@@ -37,6 +37,20 @@
   --grad: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 55%, #64748b 100%);
   --grad-soft: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(100, 116, 139, 0.12));
 
+  /* Themeable glow (r, g, b triplet), focus ring, heading gradient */
+  --glow: 139, 92, 246;
+  --ring: rgba(167, 139, 250, 0.2);
+  --head-grad: linear-gradient(120deg, #ffffff, #d8cdf5);
+
+  /* Charts (consumed by Recharts via var() in props) */
+  --series-1: #9d7bf5;
+  --chart-grid: #322c48;
+  --chart-axis: #8b839c;
+  --chart-axis-strong: #a89fbf;
+  --tooltip-bg: rgba(28, 23, 38, 0.94);
+  --tooltip-border: #322c48;
+  --tooltip-text: #f1eef9;
+
   --radius: 16px;
   --radius-sm: 11px;
   --shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.65);
@@ -167,7 +181,7 @@ h4 {
   display: grid;
   place-items: center;
   background: var(--grad);
-  box-shadow: 0 8px 22px -6px rgba(139, 92, 246, 0.55);
+  box-shadow: 0 8px 22px -6px rgba(var(--glow), 0.55);
 }
 .brand .logo svg {
   width: 22px;
@@ -220,7 +234,7 @@ h4 {
   color: #fff;
   box-shadow: inset 0 0 0 1px var(--border-strong),
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 6px 18px -12px rgba(139, 92, 246, 0.6);
+    0 6px 18px -12px rgba(var(--glow), 0.6);
 }
 .nav a.active::before {
   content: "";
@@ -263,7 +277,7 @@ h4 {
 }
 .page-head h1 {
   font-size: 29px;
-  background: linear-gradient(120deg, #ffffff, #d8cdf5);
+  background: var(--head-grad);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -506,7 +520,7 @@ select:focus,
 input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 .btn {
   position: relative;
@@ -519,7 +533,7 @@ input:focus {
   font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 20px -8px rgba(139, 92, 246, 0.55),
+  box-shadow: 0 8px 20px -8px rgba(var(--glow), 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: transform 0.14s ease, box-shadow 0.14s ease, filter 0.14s ease;
 }
@@ -534,7 +548,7 @@ input:focus {
 .btn:hover {
   transform: translateY(-1px);
   filter: brightness(1.08);
-  box-shadow: 0 12px 26px -8px rgba(139, 92, 246, 0.7),
+  box-shadow: 0 12px 26px -8px rgba(var(--glow), 0.7),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 .btn:active {
@@ -581,7 +595,7 @@ input:focus {
   background: var(--grad);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 4px 12px -6px rgba(139, 92, 246, 0.6);
+    0 4px 12px -6px rgba(var(--glow), 0.6);
 }
 
 .best-cell {
@@ -698,4 +712,126 @@ input:focus {
 }
 .content > * {
   animation: fadeUp 0.34s ease both;
+}
+
+/* ---- Theme toggle (sidebar) ---- */
+.theme-toggle {
+  margin-top: 26px;
+  padding: 0 4px;
+}
+.theme-toggle .label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  padding: 0 8px 8px;
+  font-weight: 600;
+}
+.theme-toggle .seg {
+  display: flex;
+  width: 100%;
+}
+.theme-toggle .seg button {
+  flex: 1;
+}
+
+/* ================================================================
+   Ivory theme — white / gold / grey luxury variant
+   ================================================================ */
+:root[data-theme="ivory"] {
+  /* Surfaces */
+  --bg: #f2efe9;
+  --bg-2: #ece8e0;
+  --panel: rgba(255, 255, 255, 0.55);
+  --panel-solid: #ffffff;
+  --panel-2: rgba(255, 255, 255, 0.72);
+  --panel-hover: rgba(161, 125, 26, 0.07);
+  --border: rgba(120, 100, 50, 0.16);
+  --border-strong: rgba(120, 100, 50, 0.32);
+
+  /* Liquid-glass sheen + edge lighting (white glass, gold light) */
+  --glass-sheen: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.25) 22%,
+    rgba(255, 255, 255, 0) 46%
+  );
+  --glass-tint: radial-gradient(130% 90% at 0% 0%, rgba(212, 175, 55, 0.12), transparent 55%);
+  --glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 -22px 44px -32px rgba(184, 145, 46, 0.22);
+
+  /* Text — warm charcoal hierarchy */
+  --text: #262219;
+  --text-dim: #5d5749;
+  --text-faint: #8b8471;
+
+  /* Brand — gold with a grey third stop */
+  --accent: #a17d1a;
+  --accent-2: #8a6d1f;
+  --accent-3: #6b7280;
+  --good: #047857;
+  --warn: #b45309;
+  --bad: #be123c;
+
+  --grad: linear-gradient(135deg, #d4b04a 0%, #b8912e 55%, #8a6d1f 100%);
+  --grad-soft: linear-gradient(135deg, rgba(184, 145, 46, 0.16), rgba(107, 114, 128, 0.1));
+
+  --glow: 161, 125, 26;
+  --ring: rgba(161, 125, 26, 0.22);
+  --head-grad: linear-gradient(120deg, #262219, #8a6d1f);
+
+  /* Charts */
+  --series-1: #a17d1a;
+  --chart-grid: #e3ddcd;
+  --chart-axis: #8b8471;
+  --chart-axis-strong: #6d6653;
+  --tooltip-bg: rgba(255, 255, 255, 0.96);
+  --tooltip-border: #e3ddcd;
+  --tooltip-text: #262219;
+
+  --shadow: 0 10px 30px -12px rgba(90, 75, 35, 0.28);
+  --shadow-lg: 0 24px 60px -20px rgba(90, 75, 35, 0.38);
+}
+
+:root[data-theme="ivory"] body {
+  background-image:
+    radial-gradient(900px 600px at 12% -8%, rgba(212, 175, 55, 0.14), transparent 60%),
+    radial-gradient(800px 600px at 100% 0%, rgba(184, 145, 46, 0.1), transparent 55%),
+    radial-gradient(700px 700px at 50% 120%, rgba(107, 114, 128, 0.1), transparent 60%);
+}
+
+:root[data-theme="ivory"] body::before {
+  background:
+    radial-gradient(38% 38% at 22% 30%, rgba(212, 175, 55, 0.18), transparent 60%),
+    radial-gradient(34% 34% at 78% 24%, rgba(232, 213, 163, 0.22), transparent 60%),
+    radial-gradient(42% 42% at 62% 82%, rgba(148, 152, 160, 0.16), transparent 62%);
+}
+
+:root[data-theme="ivory"] ::-webkit-scrollbar-thumb {
+  background: rgba(120, 100, 50, 0.22);
+  background-clip: padding-box;
+}
+:root[data-theme="ivory"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 100, 50, 0.38);
+  background-clip: padding-box;
+}
+
+:root[data-theme="ivory"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(250, 247, 240, 0.55));
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+/* White text on a pale gold wash would vanish — use ink instead */
+:root[data-theme="ivory"] .nav a.active {
+  color: var(--text);
+}
+
+:root[data-theme="ivory"] .pill.accent {
+  color: #7a5c16;
+  border-color: rgba(161, 125, 26, 0.4);
+}
+
+:root[data-theme="ivory"] .bar-track {
+  background: rgba(120, 100, 50, 0.12);
 }

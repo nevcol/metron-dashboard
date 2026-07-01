@@ -1,8 +1,35 @@
-# Test Plan & Verification: Glassmorphism Gray/Purple Re-theme (PR #7)
+# Test Plan & Verification: Glassmorphism Re-theme + Dual Themes (PR #7)
 
 **Date:** 2026-07-01
-**Feature:** Global visual re-theme — glassmorphism style, gray/purple color scale
+**Feature:** Global visual re-theme — liquid-glass style; dark "Noir" (graphite/violet) and light "Ivory" (white/gold/grey) themes with a sidebar toggle
 **Branch:** `claude/dashboard-glassmorphism-style-ecqupc`
+
+## Third pass: premium dual-theme system (Noir + Ivory)
+
+- `src/index.css` — all theme values behind CSS variables; new
+  `:root[data-theme="ivory"]` override block (white/gold/grey), chart tokens
+  (`--series-1`, `--chart-grid`, `--chart-axis`, `--chart-axis-strong`,
+  `--tooltip-*`), `rgba(var(--glow), α)` glow pattern, `--head-grad`, `--ring`.
+- `src/components/Layout.tsx` — Noir/Ivory `.seg` toggle at the sidebar foot;
+  state mirrored to `document.documentElement.dataset.theme`, `theme-color`
+  meta, and `localStorage["metron.theme"]`.
+- `index.html` — pre-paint inline script applies the stored theme (no flash).
+- Pages — remaining chart color literals converted to `var(...)` tokens
+  (verified empirically that Chromium resolves `var()` in SVG presentation
+  attributes before adopting). Categorical maps intentionally kept literal.
+
+### Verified (headless Chromium, both themes via `localStorage` init)
+
+- [x] `npm run build` clean; built bundle contains zero legacy hex literals for
+      chart chrome (grep of `dist/assets/*.js`)
+- [x] Noir: Overview / Cross-Sport / Periodization render identically to the
+      previous pass (purple series `#9d7bf5`, glass panels, drifting orbs)
+- [x] Ivory: warm ivory surfaces, gold gradients/glows, gold series color
+      `#a17d1a`, white glass tooltips, warm-grey grid; sport/category/phase
+      colors unchanged and distinct; nav-active text switches to ink (not white)
+- [x] Theme toggle renders in the sidebar with the active theme highlighted;
+      per-theme series colors validated for lightness band, chroma floor, and
+      ≥ 3:1 contrast against each theme's card surface (not eyeballed)
 
 ## What changed
 

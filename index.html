@@ -5,6 +5,12 @@
     <link rel="icon" type="image/svg+xml" href="/metron.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0e0c16" />
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("metron.theme") || "noir";
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

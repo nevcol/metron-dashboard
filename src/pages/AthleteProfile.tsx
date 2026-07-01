@@ -218,10 +218,10 @@ export default function AthleteProfile() {
         >
           <ResponsiveContainer width="100%" height={230}>
             <LineChart data={progression} margin={{ left: -16, right: 8, top: 6 }}>
-              <CartesianGrid stroke="#322c48" vertical={false} />
-              <XAxis dataKey="month" stroke="#8b839c" fontSize={11} tickLine={false} />
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+              <XAxis dataKey="month" stroke="var(--chart-axis)" fontSize={11} tickLine={false} />
               <YAxis
-                stroke="#8b839c"
+                stroke="var(--chart-axis)"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
@@ -229,10 +229,10 @@ export default function AthleteProfile() {
               />
               <Tooltip
                 contentStyle={{
-                  background: "#1c1726",
-                  border: "1px solid #322c48",
+                  background: "var(--tooltip-bg)",
+                  border: "1px solid var(--tooltip-border)",
                   borderRadius: 8,
-                  color: "#f1eef9",
+                  color: "var(--tooltip-text)",
                 }}
               />
               <Line
@@ -249,18 +249,18 @@ export default function AthleteProfile() {
         <Card title="Training load" sub="Planned vs actual weekly load (last 26 weeks)">
           <ResponsiveContainer width="100%" height={230}>
             <LineChart data={loadSeries} margin={{ left: -16, right: 8, top: 6 }}>
-              <CartesianGrid stroke="#322c48" vertical={false} />
-              <XAxis dataKey="week" stroke="#8b839c" fontSize={10} tickLine={false} />
-              <YAxis stroke="#8b839c" fontSize={11} tickLine={false} axisLine={false} />
+              <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+              <XAxis dataKey="week" stroke="var(--chart-axis)" fontSize={10} tickLine={false} />
+              <YAxis stroke="var(--chart-axis)" fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip
                 contentStyle={{
-                  background: "#1c1726",
-                  border: "1px solid #322c48",
+                  background: "var(--tooltip-bg)",
+                  border: "1px solid var(--tooltip-border)",
                   borderRadius: 8,
-                  color: "#f1eef9",
+                  color: "var(--tooltip-text)",
                 }}
               />
-              <Line type="monotone" dataKey="planned" stroke="#8b839c" strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
+              <Line type="monotone" dataKey="planned" stroke="var(--chart-axis)" strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
               <Line type="monotone" dataKey="actual" stroke="#22c55e" strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -269,7 +269,7 @@ export default function AthleteProfile() {
               <span className="dot" style={{ background: "#22c55e" }} /> Actual
             </span>
             <span className="item">
-              <span className="dot" style={{ background: "#8b839c" }} /> Planned
+              <span className="dot" style={{ background: "var(--chart-axis)" }} /> Planned
             </span>
           </div>
         </Card>

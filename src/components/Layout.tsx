@@ -1,5 +1,14 @@
 import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
+
+type Theme = "noir" | "ivory";
+
+const THEME_KEY = "metron.theme";
+
+function initialTheme(): Theme {
+  return document.documentElement.dataset.theme === "ivory" ? "ivory" : "noir";
+}
 
 /** Minimal inline line-icons (stroke = currentColor). */
 const I = {
@@ -83,6 +92,20 @@ const NAV = [
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "ivory" ? "#f2efe9" : "#0e0c16");
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* private mode — theme just won't persist */
+    }
+  }, [theme]);
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -116,6 +139,23 @@ export default function Layout({ children }: { children: ReactNode }) {
             </div>
           ))}
         </nav>
+        <div className="theme-toggle">
+          <div className="label">Theme</div>
+          <div className="seg">
+            <button
+              className={theme === "noir" ? "active" : ""}
+              onClick={() => setTheme("noir")}
+            >
+              Noir
+            </button>
+            <button
+              className={theme === "ivory" ? "active" : ""}
+              onClick={() => setTheme("ivory")}
+            >
+              Ivory
+            </button>
+          </div>
+        </div>
       </aside>
       <main className="content">{children}</main>
     </div>

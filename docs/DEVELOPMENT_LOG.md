@@ -4,6 +4,47 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-07-01 — Dual themes: premium "Noir" + white/gold/grey "Ivory" (branch `claude/dashboard-glassmorphism-style-ecqupc`)
+
+**What:** Introduced a two-theme system on top of the liquid-glass restyle. The
+dark graphite/violet look is now the "Noir" theme; a new "Ivory" theme delivers
+a white/gold/grey luxury variant. A Noir/Ivory segmented toggle lives at the
+bottom of the sidebar, persisted to `localStorage` under `metron.theme` (a UI
+preference key, deliberately separate from the dataset store — the "mutations go
+through the store" rule applies to athlete data, not chrome preferences).
+
+**Mechanism:**
+- `index.html` sets `data-theme` on `<html>` from `localStorage` in an inline
+  script before first paint (no flash of wrong theme). `Layout.tsx` owns the
+  toggle state, mirrors it to `document.documentElement.dataset.theme`, keeps
+  the `theme-color` meta in sync, and persists it.
+- All theming is CSS-variable-driven. `:root` holds Noir; a
+  `:root[data-theme="ivory"]` block overrides surfaces, text, brand accents
+  (gold `#a17d1a` scale), gradients, glass sheen/edge tokens, glows, shadows,
+  and semantic status colors. A handful of component rules that hardcoded
+  white-on-gradient text or purple-tinted tracks get explicit ivory overrides.
+- **Charts are themed through CSS variables passed directly to Recharts props**
+  (`stroke="var(--chart-grid)"`, `fill="var(--series-1)"`, tooltip
+  `contentStyle` vars). Chromium/Firefox resolve `var()` in SVG presentation
+  attributes — verified empirically in this session before adopting the
+  approach. New chart tokens: `--series-1`, `--chart-grid`, `--chart-axis`,
+  `--chart-axis-strong`, `--tooltip-bg/border/text`.
+- Glow shadows use an `rgba(var(--glow), α)` triplet pattern so one variable
+  re-colours every glow per theme.
+
+**Color discipline:** The primary series colors were validated (lightness band,
+chroma floor, contrast ≥ 3:1 vs the card surface) rather than eyeballed —
+Noir's purple snapped to `#9d7bf5`, Ivory's gold to `#a17d1a`. Categorical maps
+(`SPORT_COLORS`, `CATEGORY_COLORS`, `PHASE_COLOR`, `STRENGTH_PHASE_COLOR`,
+`QUALITY_COLOR`, `AVATAR_COLORS`) remain fixed hex values in both themes —
+identity colors must not change when the theme does.
+
+**Why:** Requested premium/high-end elevation plus a white/gold/grey option.
+Doing it as a variable-driven theme system (rather than a palette swap) means
+future themes are an override block, not another sweep through seven pages.
+
+---
+
 ## 2026-07-01 — Glassmorphism gray/purple re-theme (branch `claude/dashboard-glassmorphism-style-ecqupc`)
 
 **What:** Re-skinned the entire dashboard's visual theme from the blue/indigo/purple
