@@ -9,9 +9,11 @@ import {
 import type {
   Athlete,
   AthleteProfile,
+  CompetitionPriority,
   CompetitionResult,
   Dataset,
   PeriodizationPhase,
+  PlannedCompetition,
   StrengthPhase,
   TestResult,
   TrainingQuality,
@@ -22,6 +24,8 @@ import { generateDataset } from "./generate";
 const STORAGE_KEY = "metron.dataset.v1";
 
 interface StoreValue extends Dataset {
+  /** Always present in the store, even when older persisted datasets lack the field. */
+  plannedCompetitions: PlannedCompetition[];
   addAthlete: (a: Omit<Athlete, "id" | "profiles"> & { profile: Omit<AthleteProfile, "id" | "athleteId"> }) => void;
   addTestResult: (r: Omit<TestResult, "id">) => void;
   addCompetitionResult: (r: Omit<CompetitionResult, "id">) => void;
@@ -41,6 +45,12 @@ interface StoreValue extends Dataset {
       primaryQuality?: TrainingQuality;
       secondaryQualities?: TrainingQuality[];
     }[],
+  ) => void;
+  /** Replace the scheduled competitions for one athlete+sport with a fresh list. */
+  savePlannedCompetitions: (
+    athleteId: string,
+    sportId: string,
+    comps: { date: string; name: string; priority: CompetitionPriority }[],
   ) => void;
   resetData: () => void;
 }
@@ -71,6 +81,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const value = useMemo<StoreValue>(
     () => ({
       ...dataset,
+      plannedCompetitions: dataset.plannedCompetitions ?? [],
       addAthlete: ({ profile, ...rest }) =>
         setDataset((d) => {
           const id = `ath-manual-${Date.now()}`;
@@ -133,6 +144,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             secondaryQualities: w.secondaryQualities,
           }));
           return { ...d, trainingWeeks: [...updated, ...added] };
+        }),
+      savePlannedCompetitions: (athleteId, sportId, comps) =>
+        setDataset((d) => {
+          const kept = (d.plannedCompetitions ?? []).filter(
+            (c) => !(c.athleteId === athleteId && c.sportId === sportId),
+          );
+          const stamp = Date.now();
+          const added: PlannedCompetition[] = comps.map((c, i) => ({
+            id: `pc-${athleteId}-${sportId}-${i}-${stamp}`,
+            athleteId,
+            sportId,
+            date: c.date,
+            name: c.name,
+            priority: c.priority,
+          }));
+          return { ...d, plannedCompetitions: [...kept, ...added] };
         }),
       resetData: () => {
         localStorage.removeItem(STORAGE_KEY);

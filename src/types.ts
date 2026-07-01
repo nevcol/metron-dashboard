@@ -81,6 +81,19 @@ export interface CompetitionResult {
   placing: number;
 }
 
+/** Standard competition priority: A = key/taper target, B = important, C = training comp. */
+export type CompetitionPriority = "A" | "B" | "C";
+
+/** A scheduled (future) competition placed on an athlete's training plan. */
+export interface PlannedCompetition {
+  id: string;
+  athleteId: string;
+  sportId: string;
+  date: string;
+  name: string;
+  priority: CompetitionPriority;
+}
+
 export type PeriodizationPhase =
   | "Preparation"
   | "Pre-Competition"
@@ -135,4 +148,6 @@ export interface Dataset {
   testResults: TestResult[];
   competitionResults: CompetitionResult[];
   trainingWeeks: TrainingWeek[];
+  /** Scheduled competitions attached to training plans (may be absent in older stored data). */
+  plannedCompetitions?: PlannedCompetition[];
 }
