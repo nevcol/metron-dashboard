@@ -1,6 +1,6 @@
 # Metron — Process & Product Mentorship Guide
 
-_Last reviewed: 2026-06-22_
+_Last reviewed: 2026-07-01_
 
 This document is for future contributors and AI sessions. It covers **how work happens** and **why the product is shaped the way it is**. For technical architecture, see `docs/ARCHITECTURE.md`.
 
@@ -31,23 +31,33 @@ feature branch → draft PR → CI green (build job) → merge to main → deplo
 - CI runs `npm run build` (tsc + Vite) on every push and PR. This is the required gate.
 - Merge to `main` triggers the deploy job automatically.
 
-### Current branches (as of 2026-06-22)
+### Current branches (as of 2026-07-01)
 
 | Branch | State | Notes |
 |---|---|---|
-| `main` | Live | 5 commits. Contains the full initial build (PR #1) and docs commit. Does NOT yet contain cross-sport work. |
-| `claude/intersport-comparison` | Active, ahead of main | All cross-sport work (PRs #2, #3). 3 commits ahead of main. This is where current feature work lives. |
+| `main` | Live | Up to date through PR #6. Contains the initial build (PR #1), cross-sport comparison + filters (PRs #2/#3), the Pages deploy fix (PR #4), the periodization plan builder (PR #5), and strength phases/training qualities/calendar view (PR #6). |
+| `claude/dashboard-glassmorphism-style-ecqupc` | Active (current session branch) | Currently identical to `main` (0 commits ahead/behind) — no feature work committed on it yet this session. |
+| `claude/intersport-comparison` | **Merged, historical** | Its 3 commits (cross-sport page, raw-value mode, gender/age filters) landed via PRs #2 and #3 and are now part of `main`. No longer ahead of main; safe to delete, but not urgent. |
 | `claude/athlete-testing-dashboard-ommj6u` | **STALE — do not use** | Pre-dates the main PR #1 merge. Only 4 commits (initial setup + early UI iteration). Has no `docs/` folder. Contains none of the cross-sport features. Safe to ignore; do not branch from it. |
 
 ### What is ahead of main right now
 
-The `claude/intersport-comparison` branch contains:
-- `f47117f` — Cross-sport comparison page (initial)
-- `8b379e8` — Raw-value mode for cross-sport
-- `c37f071` — Gender & age-band filters (PR #3)
-- `8ddd979` — Comprehensive docs (ARCHITECTURE, DEPLOYMENT, DEVELOPMENT_LOG, TEST_VERIFICATION_PR3)
+Nothing — as of 2026-07-01, `main` and the current session branch
+(`claude/dashboard-glassmorphism-style-ecqupc`) point at the same commit
+(`eeb8af6`). All previously-pending work (cross-sport filters, the Pages
+deploy fix, the periodization plan builder, and the strength-phase/training-
+quality/calendar work) has merged. The CLAUDE.md session-start protocol still
+references `claude/intersport-comparison` as "ahead of main" — that is now
+stale; the branch's work has shipped. New feature work should start from a
+fresh branch off current `main`.
 
-**These changes need to be merged to `main` to deploy.**
+**Documentation-trio gap to note:** PR #6 (`eeb8af6`, strength phases /
+training qualities / calendar view) shipped without a
+`docs/TEST_VERIFICATION_PR6.md`. Only `TEST_VERIFICATION_PR3.md` and
+`TEST_VERIFICATION_PR5.md` exist. The Development Log entry for PR #6 also
+doesn't cite a verification doc, unlike the PR #3 and #5 entries. Future
+sessions should backfill `TEST_VERIFICATION_PR6.md` or treat this as a
+process debt item.
 
 ---
 
