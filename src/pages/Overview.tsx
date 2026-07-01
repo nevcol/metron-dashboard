@@ -113,25 +113,25 @@ export default function Overview() {
               <AreaChart data={monthSeries} margin={{ left: -18, right: 8, top: 6 }}>
                 <defs>
                   <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#a78bfa" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#a78bfa" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="#243456" vertical={false} />
-                <XAxis dataKey="month" stroke="#6b7da0" fontSize={11} tickLine={false} />
-                <YAxis stroke="#6b7da0" fontSize={11} tickLine={false} axisLine={false} />
+                <CartesianGrid stroke="#322c48" vertical={false} />
+                <XAxis dataKey="month" stroke="#8b839c" fontSize={11} tickLine={false} />
+                <YAxis stroke="#8b839c" fontSize={11} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: "#15203a",
-                    border: "1px solid #243456",
+                    background: "#1c1726",
+                    border: "1px solid #322c48",
                     borderRadius: 8,
-                    color: "#e8eefc",
+                    color: "#f1eef9",
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="tests"
-                  stroke="#0ea5e9"
+                  stroke="#a78bfa"
                   strokeWidth={2}
                   fill="url(#g1)"
                 />
@@ -157,10 +157,10 @@ export default function Overview() {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: "#15203a",
-                  border: "1px solid #243456",
+                  background: "#1c1726",
+                  border: "1px solid #322c48",
                   borderRadius: 8,
-                  color: "#e8eefc",
+                  color: "#f1eef9",
                 }}
               />
             </PieChart>

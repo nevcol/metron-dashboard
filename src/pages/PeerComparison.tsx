@@ -129,22 +129,22 @@ export default function PeerComparison() {
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={radarData} outerRadius={100}>
-              <PolarGrid stroke="#243456" />
-              <PolarAngleAxis dataKey="test" tick={{ fill: "#9fb0d0", fontSize: 11 }} />
-              <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#6b7da0", fontSize: 10 }} angle={90} />
+              <PolarGrid stroke="#322c48" />
+              <PolarAngleAxis dataKey="test" tick={{ fill: "#a89fbf", fontSize: 11 }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#8b839c", fontSize: 10 }} angle={90} />
               <Radar
                 dataKey="percentile"
-                stroke="#0ea5e9"
-                fill="#0ea5e9"
+                stroke="#a78bfa"
+                fill="#a78bfa"
                 fillOpacity={0.35}
                 strokeWidth={2}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#15203a",
-                  border: "1px solid #243456",
+                  background: "#1c1726",
+                  border: "1px solid #322c48",
                   borderRadius: 8,
-                  color: "#e8eefc",
+                  color: "#f1eef9",
                 }}
               />
             </RadarChart>

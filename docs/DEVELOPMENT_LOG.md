@@ -4,6 +4,48 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-07-01 — Glassmorphism gray/purple re-theme (branch `claude/dashboard-glassmorphism-style-ecqupc`)
+
+**What:** Re-skinned the entire dashboard's visual theme from the blue/indigo/purple
+brand palette to a gray/purple glassmorphism look. This is a chrome-only change —
+no components, routes, data flow, or page structure were touched.
+
+**Theme (`src/index.css`):**
+- Brand variables shifted from blue-led (`--accent: #38bdf8` sky blue) to a
+  violet-to-slate scale (`--accent: #a78bfa`, `--accent-2: #8b5cf6`,
+  `--accent-3: #64748b`). `--grad` now sweeps violet → slate gray instead of
+  blue → indigo → purple.
+- Surfaces (`--bg`, `--panel`, `--panel-2`, `--border`, text hierarchy) recast as
+  dark, purple-tinted grays instead of navy/blue-black.
+- `.card` and `.sidebar` blur increased (16px → 22px, 14px → 20px) with added
+  `saturate()` and a subtle inset top highlight for a stronger glass sheen.
+- Buttons, focus rings, pills, scrollbars, and the body's ambient radial glows
+  all recolored to match.
+
+**Charts and per-page literals:** Recharts components pass color as literal
+props (not CSS vars), so the same shift was applied by hand across
+`Overview.tsx`, `Correlations.tsx`, `PeerComparison.tsx`, `CrossSport.tsx`,
+`Periodization.tsx`, `Results.tsx`, `AthleteProfile.tsx`:
+- Chart chrome (grid lines, tooltip background/border/text, axis strokes/ticks)
+  moved from blue-slate hex literals to the same gray-purple family.
+- The single-series "primary" data color used for trend lines, radar self-series,
+  and default scatter points moved from the old blue accent to the new purple
+  accent (`#a78bfa`).
+
+**Deliberately left unchanged:** `CATEGORY_COLORS`, `SPORT_COLORS`,
+`PHASE_COLOR`, `STRENGTH_PHASE_COLOR`, `QUALITY_COLOR`, and the `AVATAR_COLORS`
+palette in `src/data/catalog.ts` / `src/pages/Periodization.tsx` /
+`src/components/ui.tsx`. These are categorical/semantic color-coding (they
+distinguish sports, test categories, phases, or individual athletes from one
+another) rather than brand chrome, and the Engineering Mentor doc explicitly
+warns against duplicating or destabilizing these maps.
+
+**Why:** Requested visual refresh to a gray/purple glassmorphism style. Scoped
+to theme chrome and shared chart styling so the change is purely cosmetic and
+carries zero risk to the stats/derived-state architecture.
+
+---
+
 ## 2026-06-23 — Periodization plan builder (branch `claude/periodization-builder`)
 
 **What:** Turned the Periodization page from a read-only analytics view into a

@@ -35,6 +35,9 @@ each push to the development/main branches via GitHub Pages).
   builder: set phase lengths and a peak weekly load, auto-shape a periodized load
   curve (progressive build, deloads, taper into competition), fine-tune any week,
   and save the plan to the athlete.
+- **Glassmorphism UI.** Frosted, translucent panels with layered blur sit over a
+  gray/purple gradient backdrop. The accent palette, buttons, charts, and focus
+  states all draw from the same gray-to-violet scale for a cohesive look.
 
 ## Tech
 

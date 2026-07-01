@@ -271,7 +271,7 @@ export default function CrossSport() {
             <Card title="Physical profile by sport" sub="Mean percentile per shared test, across the filtered pool">
               <ResponsiveContainer width="100%" height={330}>
                 <RadarChart data={sportRadar} outerRadius={120}>
-                  <PolarGrid stroke="#243456" />
+                  <PolarGrid stroke="#322c48" />
                   <PolarAngleAxis dataKey="test" tick={{ fill: "#a4b2d0", fontSize: 11 }} />
                   <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#6b7aa0", fontSize: 10 }} angle={90} />
                   {SPORTS.map((s) => (
@@ -286,7 +286,7 @@ export default function CrossSport() {
                     />
                   ))}
                   <Tooltip
-                    contentStyle={{ background: "#15203a", border: "1px solid #243456", borderRadius: 8, color: "#e8eefc" }}
+                    contentStyle={{ background: "#1c1726", border: "1px solid #322c48", borderRadius: 8, color: "#f1eef9" }}
                   />
                 </RadarChart>
               </ResponsiveContainer>
@@ -389,7 +389,7 @@ export default function CrossSport() {
             <>
               <ResponsiveContainer width="100%" height={290}>
                 <RadarChart data={athleteRadar} outerRadius={100}>
-                  <PolarGrid stroke="#243456" />
+                  <PolarGrid stroke="#322c48" />
                   <PolarAngleAxis dataKey="test" tick={{ fill: "#a4b2d0", fontSize: 11 }} />
                   <PolarRadiusAxis domain={[0, 100]} tick={{ fill: "#6b7aa0", fontSize: 10 }} angle={90} />
                   <Radar
@@ -400,7 +400,7 @@ export default function CrossSport() {
                     strokeWidth={2}
                   />
                   <Tooltip
-                    contentStyle={{ background: "#15203a", border: "1px solid #243456", borderRadius: 8, color: "#e8eefc" }}
+                    contentStyle={{ background: "#1c1726", border: "1px solid #322c48", borderRadius: 8, color: "#f1eef9" }}
                   />
                 </RadarChart>
               </ResponsiveContainer>
