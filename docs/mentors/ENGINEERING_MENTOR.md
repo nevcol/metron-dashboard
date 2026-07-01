@@ -1,7 +1,7 @@
 # Metron — Engineering Mentorship Document
 
-_Last reviewed: 2026-06-22_
-_Covers all commits through `8ddd979`_
+_Last reviewed: 2026-07-01_
+_Covers all commits through `eeb8af6`_
 
 > This document is written for developers (human or AI) who are about to write code in Metron for the first time. Read it before touching anything.
 
@@ -26,6 +26,8 @@ Eight things to internalize before you write a single line:
 7. **HashRouter + `base: "./"` are not negotiable.** The app is hosted on GitHub Pages as a static site under a subpath. Switching to `BrowserRouter` or changing `base` will break all deployed links.
 
 8. **The `athlete.profiles[0]` assumption is load-bearing.** The data model supports multiple sport profiles per athlete but the generator assigns exactly one. Many pages assume `profiles[0]` is the primary sport. This is technical debt, not a bug — see Section 8.
+
+9. **Not every store mutation is append-only.** `addAthlete`/`addTestResult`/`addCompetitionResult` just append. `saveTrainingPlan` (added for the Periodization plan builder) is an **upsert keyed by `weekStart`** — it updates matching weeks in place (preserving `actualLoad`) and appends the rest. Check which pattern a mutation uses before assuming "adding" means "appending."
 
 ---
 
@@ -78,6 +80,60 @@ filteredAthletes (useMemo from genderFilter + ageBandFilter)
 ```
 
 Change `genderFilter` or `ageBandFilter` and the entire tree recomputes. If you add a filter, wire it to `filteredAthletes` — do not wire it to any individual downstream memo.
+
+### Periodization: Analyze vs Build mode, and the plan builder
+
+`Periodization.tsx` (now ~1,220 lines) has grown from a read-only analytics view into a dual-mode page:
+
+```
+Mode = "analyze" | "build"   (page-level useState, header seg toggle)
+
+"analyze" — unchanged: load-vs-adherence charts, phase distribution,
+            load-vs-test-progress scatter, all driven by existing trainingWeeks.
+
+"build"   — PlanBuilder component: generates a draft macrocycle, lets the
+            coach hand-edit it week by week, then persists it.
+```
+
+**Generation → edit → persist pipeline:**
+
+```
+PlanSettings (startDate, per-phase lengths, peakLoad, deload toggle, phaseQualities)
+  └─► generatePlan(settings): DraftWeek[]   — pure function, no store access
+        walks PHASE_ORDER, interpolates PHASE_SHAPE fraction-of-peak per week,
+        applies a deload dip every 4th Preparation/Pre-Competition week,
+        assigns strengthPhase (PHASE_DEFAULT_STRENGTH, or "Deload" on deload weeks)
+        and primaryQuality (from settings.phaseQualities) per week
+  └─► draft: DraftWeek[] (useState in PlanBuilder) — hand edits via editWeek() patch
+  └─► saveTrainingPlan(athleteId, sportId, weeks) — store mutation, upserts by weekStart
+```
+
+`saveTrainingPlan` (`src/data/store.tsx`) is an **upsert keyed on `weekStart`**, not a
+wholesale replace: any existing `TrainingWeek` whose `weekStart` matches a draft week is
+updated in place (preserving its logged `actualLoad`); any draft week with no existing
+match is appended. This means re-saving a plan, or extending it forward, never wipes the
+two years of seeded training history that the Analyze view depends on. If you touch this
+function, keep the upsert semantics — a naive "delete all + insert new" would silently
+erase `actualLoad` for weeks already trained.
+
+**Strength phases and training qualities** (`StrengthPhase`, `TrainingQuality` in
+`src/types.ts`) are a second, finer-grained periodization axis layered onto the existing
+`PeriodizationPhase`. Unlike `CATEGORY_COLORS`/`SPORT_COLORS` in `catalog.ts`, the color
+maps and grouping catalogue for these two new types (`STRENGTH_PHASE_COLOR`,
+`QUALITY_GROUPS`, `QUALITY_COLOR`, `PHASE_DEFAULT_STRENGTH`, `PHASE_DEFAULT_QUALITY`) live
+as page-local constants at the top of `Periodization.tsx`, not in `catalog.ts`. This is a
+deliberate deviation (these concepts are specific to the plan builder, not shared catalog
+data like tests/sports) — but if a second page ever needs to render a quality pill or
+strength-phase color, promote these maps to `catalog.ts` first rather than duplicating them.
+
+**Calendar / List view toggle:** the weekly plan grid has its own `WeekView = "calendar" |
+"list"` seg toggle (default `"calendar"`), independent of the page-level `Mode` toggle.
+`CalendarView` groups draft weeks by month with phase-accent-bordered cards, colour-coded
+strength-phase and primary-quality pills, and inline expand-to-edit (including secondary
+quality toggles via `onToggleSecondary`). `list` view is the denser original grid with
+Strength/Quality `<optgroup>` selects (`QualitySelect` component). Both views edit the same
+`draft` state through the same `editWeek`/`toggleSecondary` callbacks — do not fork the
+edit logic per view.
 
 ### The `commonTests()` fairness pattern
 
@@ -260,6 +316,15 @@ If you switch hosting to a server that supports rewrites (Vercel, Netlify, etc.)
 - Renamed a variable but kept the old name? Build fails.
 - Added a utility function parameter for future use? Prefix with `_` or build fails.
 - Used `import { A, B }` but only referenced `A`? Remove `B` or build fails.
+
+### Strength-phase and training-quality colors are page-local, not in `catalog.ts`
+
+Unlike `CATEGORY_COLORS` and `SPORT_COLORS`, which live in `src/data/catalog.ts` per the
+CSS-variable/color convention in Section 4, `STRENGTH_PHASE_COLOR` and `QUALITY_COLOR`
+(added with the Periodization plan builder) are defined at the top of
+`src/pages/Periodization.tsx`. This was a deliberate scoping choice since only that page
+uses them today. If you need these colors on another page, move them to `catalog.ts` first
+rather than importing them from `Periodization.tsx` or re-declaring a duplicate map.
 
 ### `latestTests` is O(n) over all test results
 
