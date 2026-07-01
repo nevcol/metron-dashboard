@@ -27,6 +27,19 @@ No changes to `src/data/catalog.ts` category/sport color maps, `PHASE_COLOR`,
 `AVATAR_COLORS` in `ui.tsx` — these are semantic/categorical color-coding, not
 brand chrome, and were intentionally left alone.
 
+## Follow-up: "liquid glass" refinement
+
+A second styling pass (still `index.css`-only, plus this doc + the dev log)
+deepened the effect toward an Apple-style liquid-glass look: reusable
+`--glass-sheen` / `--glass-tint` / `--glass-edge` tokens, a `.card::before`
+specular sheen with layered inset edge-lighting and stronger `backdrop-filter`,
+a slow-drifting animated `body::before` orb layer (guarded by
+`prefers-reduced-motion`), and glossier buttons / segmented control / inputs /
+pills / nav-active states. Re-verified with `npm run build` and fresh Chromium
+screenshots of the Dashboard (glossy stat cards, donut + area chart intact),
+Cross-Sport, and Periodization — no layout regressions; charts render correctly
+once their mount animation settles.
+
 ## Automated / static checks
 
 - [x] `npm run build` succeeds (`tsc -b && vite build`), zero TypeScript errors

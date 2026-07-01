@@ -44,6 +44,25 @@ warns against duplicating or destabilizing these maps.
 to theme chrome and shared chart styling so the change is purely cosmetic and
 carries zero risk to the stats/derived-state architecture.
 
+**Follow-up — "liquid glass" pass:** Pushed the frosted look further toward an
+Apple-style liquid-glass aesthetic, still `index.css`-only:
+- New reusable tokens: `--glass-sheen` (diagonal specular streak),
+  `--glass-tint` (corner violet light), `--glass-edge` (layered inset
+  edge-lighting box-shadow).
+- `.card` gains `position: relative; isolation: isolate`, deeper
+  `backdrop-filter: blur(30px) saturate(185%)`, the `--glass-edge` inset
+  lighting, and a `::before` (z-index -1, `pointer-events: none`) painting the
+  sheen + tint on the glass surface beneath content. Hover lifts 1px.
+- A fixed, slow-drifting `body::before` layer with three soft violet/slate orbs
+  (`liquidDrift` keyframes, 28s) gives the background a subtle living motion;
+  gated behind `prefers-reduced-motion: reduce`.
+- Glossier interactive glass: buttons get a top-half `::before` highlight + white
+  text on the gradient; the `.seg` control and its active tab, `select`/`input`,
+  `.stat-ico`, `.pill.accent`, and the active nav link all pick up blur and/or
+  inset top-highlights.
+- Panels made a touch more translucent (lower alpha) so more of the drifting
+  backdrop refracts through the glass.
+
 ---
 
 ## 2026-06-23 — Periodization plan builder (branch `claude/periodization-builder`)
