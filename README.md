@@ -14,7 +14,13 @@ each push to the development/main branches via GitHub Pages).
 
 - **Per-sport athlete profiles.** Each athlete carries a separate profile for
   every sport they compete in, with their events, experience and a full test
-  battery.
+  battery. Every profile is organised into four tabs — **Overview** (historical
+  test progression, training load, and competition results), **Schedule**
+  (periodization phase breakdown and scheduled competitions, with a deep link
+  into the plan builder), **Calendar** (a unified week-by-week view of
+  planning, testing, and competitions together), and **Testing** (percentile
+  radar and full test-battery standing against peers) — so an athlete's whole
+  record lives in one place.
 - **Testing log.** Record and browse every physical test (sprints, jumps,
   strength, aerobic, mobility) across the squad, with a quick entry form.
 - **Correlation analysis.** A pairwise correlation matrix and an interactive

@@ -1,6 +1,6 @@
 # Metron — Architecture Reference
 
-_Last updated: 2026-06-22_
+_Last updated: 2026-07-02_
 
 This document describes how the Metron dashboard is put together: the domain
 model, data flow, the statistics that power the analytics, and how each page
@@ -29,7 +29,9 @@ src/
     Layout.tsx     Sidebar nav (SVG line-icons), PageHead component
     ui.tsx         Avatar, StatCard, Bar, Card primitives
   data/
-    catalog.ts     Sports, events, TEST_TYPES, colors, commonTests()
+    catalog.ts     Sports, events, TEST_TYPES, colors, commonTests(),
+                   periodization phase/quality/priority catalogue (shared by
+                   Periodization.tsx and AthleteProfile.tsx)
     generate.ts    Synthetic dataset generator (40 athletes)
     store.tsx      React context + localStorage persistence
   lib/
@@ -40,7 +42,10 @@ src/
   pages/
     Overview.tsx        Squad KPIs, testing volume, composition
     Athletes.tsx        Roster table + "Add athlete" form
-    AthleteProfile.tsx  Per-athlete battery vs peers, progression, load
+    AthleteProfile.tsx  Tabbed profile: Overview (progression, load,
+                        results), Schedule (phases + scheduled comps),
+                        Calendar (unified planning/testing/comps view),
+                        Testing (battery + percentile radar vs peers)
     Testing.tsx         Testing log + "Record test" form
     Results.tsx         Season-best leaderboard, mark progression, UTR
     Correlations.tsx    Correlation heatmap + scatter explorer

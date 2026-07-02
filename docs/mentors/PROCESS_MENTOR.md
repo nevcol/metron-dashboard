@@ -1,6 +1,6 @@
 # Metron — Process & Product Mentorship Guide
 
-_Last reviewed: 2026-07-01_
+_Last reviewed: 2026-07-02_
 
 This document is for future contributors and AI sessions. It covers **how work happens** and **why the product is shaped the way it is**. For technical architecture, see `docs/ARCHITECTURE.md`.
 
@@ -31,33 +31,38 @@ feature branch → draft PR → CI green (build job) → merge to main → deplo
 - CI runs `npm run build` (tsc + Vite) on every push and PR. This is the required gate.
 - Merge to `main` triggers the deploy job automatically.
 
-### Current branches (as of 2026-07-01)
+### Current branches (as of 2026-07-02)
 
 | Branch | State | Notes |
 |---|---|---|
-| `main` | Live | Up to date through PR #6. Contains the initial build (PR #1), cross-sport comparison + filters (PRs #2/#3), the Pages deploy fix (PR #4), the periodization plan builder (PR #5), and strength phases/training qualities/calendar view (PR #6). |
-| `claude/dashboard-glassmorphism-style-ecqupc` | Active (current session branch) | Currently identical to `main` (0 commits ahead/behind) — no feature work committed on it yet this session. |
+| `main` | Live | Up to date through PR #8. Contains the initial build (PR #1), cross-sport comparison + filters (PRs #2/#3), the Pages deploy fix (PR #4), the periodization plan builder (PR #5), strength phases/training qualities/calendar view (PR #6), the liquid-glass Noir/Ivory dual-theme restyle (PR #7), and competition scheduling on the periodization plan (PR #8). |
+| `claude/athlete-profile-organization-dl255l` | Active (current session branch) | Fresh branch off `main`, 0 commits ahead/behind — no feature work committed yet this session. |
+| `claude/dashboard-glassmorphism-style-ecqupc` | **Merged, historical** | Its glassmorphism re-theme and dual Noir/Ivory theme commits landed via PR #7 and are now part of `main`. No longer ahead of main. |
+| `claude/plan-competitions` | **Merged, historical** | Its competition-scheduling commit landed via PR #8 and is now part of `main`. No longer ahead of main. |
 | `claude/intersport-comparison` | **Merged, historical** | Its 3 commits (cross-sport page, raw-value mode, gender/age filters) landed via PRs #2 and #3 and are now part of `main`. No longer ahead of main; safe to delete, but not urgent. |
 | `claude/athlete-testing-dashboard-ommj6u` | **STALE — do not use** | Pre-dates the main PR #1 merge. Only 4 commits (initial setup + early UI iteration). Has no `docs/` folder. Contains none of the cross-sport features. Safe to ignore; do not branch from it. |
 
 ### What is ahead of main right now
 
-Nothing — as of 2026-07-01, `main` and the current session branch
-(`claude/dashboard-glassmorphism-style-ecqupc`) point at the same commit
-(`eeb8af6`). All previously-pending work (cross-sport filters, the Pages
-deploy fix, the periodization plan builder, and the strength-phase/training-
-quality/calendar work) has merged. The CLAUDE.md session-start protocol still
-references `claude/intersport-comparison` as "ahead of main" — that is now
-stale; the branch's work has shipped. New feature work should start from a
-fresh branch off current `main`.
+Nothing — as of 2026-07-02, `main` and the current session branch
+(`claude/athlete-profile-organization-dl255l`) point at the same commit
+(`9843332`). All previously-pending work (cross-sport filters, the Pages
+deploy fix, the periodization plan builder, the strength-phase/training-
+quality/calendar work, the Noir/Ivory theme system, and competition
+scheduling) has merged. The CLAUDE.md session-start protocol still references
+`claude/intersport-comparison` as "ahead of main" — that has been stale since
+the prior review; the branch's work has shipped. New feature work should
+start from a fresh branch off current `main` (this session's branch,
+`claude/athlete-profile-organization-dl255l`, already is one).
 
-**Documentation-trio gap to note:** PR #6 (`eeb8af6`, strength phases /
+**Documentation-trio gap — still open:** PR #6 (`eeb8af6`, strength phases /
 training qualities / calendar view) shipped without a
-`docs/TEST_VERIFICATION_PR6.md`. Only `TEST_VERIFICATION_PR3.md` and
-`TEST_VERIFICATION_PR5.md` exist. The Development Log entry for PR #6 also
-doesn't cite a verification doc, unlike the PR #3 and #5 entries. Future
-sessions should backfill `TEST_VERIFICATION_PR6.md` or treat this as a
-process debt item.
+`docs/TEST_VERIFICATION_PR6.md`, and it has not been backfilled as of this
+review. `docs/` now has verification docs for PR #3, #5, #7, and #8 — PR #6
+remains the only gap. PRs #7 and #8 both followed the documentation-trio rule
+correctly (dev log entry + verification doc for each). Future sessions should
+backfill `TEST_VERIFICATION_PR6.md` or continue tracking this as a process
+debt item.
 
 ---
 
