@@ -1,7 +1,7 @@
 # Metron — Engineering Mentorship Document
 
-_Last reviewed: 2026-07-01_
-_Covers all commits through `eeb8af6`_
+_Last reviewed: 2026-07-02_
+_Covers all commits through `9843332`_
 
 > This document is written for developers (human or AI) who are about to write code in Metron for the first time. Read it before touching anything.
 
@@ -27,7 +27,11 @@ Eight things to internalize before you write a single line:
 
 8. **The `athlete.profiles[0]` assumption is load-bearing.** The data model supports multiple sport profiles per athlete but the generator assigns exactly one. Many pages assume `profiles[0]` is the primary sport. This is technical debt, not a bug — see Section 8.
 
-9. **Not every store mutation is append-only.** `addAthlete`/`addTestResult`/`addCompetitionResult` just append. `saveTrainingPlan` (added for the Periodization plan builder) is an **upsert keyed by `weekStart`** — it updates matching weeks in place (preserving `actualLoad`) and appends the rest. Check which pattern a mutation uses before assuming "adding" means "appending."
+9. **Not every store mutation is append-only.** `addAthlete`/`addTestResult`/`addCompetitionResult` just append. `saveTrainingPlan` (added for the Periodization plan builder) is an **upsert keyed by `weekStart`** — it updates matching weeks in place (preserving `actualLoad`) and appends the rest. `savePlannedCompetitions` (added for competition scheduling) is a **replace-by-scope** mutation — it wipes and re-inserts the full competition list for one `athleteId + sportId` pair, leaving every other athlete/sport's schedule untouched. Three different mutation shapes now exist in the same store; check which one you're calling.
+
+10. **Never hardcode a hex color in chart JSX — use the CSS var() chart tokens.** The app has two themes (Noir / Ivory, see Section 2) and every chart's grid, axis, tooltip, and primary series color is threaded through CSS custom properties (`--chart-grid`, `--chart-axis`, `--chart-axis-strong`, `--tooltip-bg`, `--tooltip-border`, `--tooltip-text`, `--series-1`) passed as `var(--token)` strings into Recharts SVG props (`stroke`, `fill`, `contentStyle`). A hardcoded `"#243456"` in new chart code will look fine in Noir and break in Ivory. Categorical/identity colors (`CATEGORY_COLORS`, `SPORT_COLORS`, `STRENGTH_PHASE_COLOR`, `QUALITY_COLOR`, `PRIORITY_COLOR`) are the deliberate exception — those stay theme-invariant by design so a sport or category keeps the same color regardless of theme.
+
+11. **Optional dataset fields need a store-level default, not a page-level one.** `Dataset.plannedCompetitions` is typed `PlannedCompetition[] | undefined` specifically so older data persisted in `localStorage` (from before the field existed) doesn't crash on load. The normalization (`dataset.plannedCompetitions ?? []`) happens once, in `store.tsx`'s `StoreValue` construction — every page consumes `plannedCompetitions` via `useStore()` as a guaranteed array. If you add another optional collection to `Dataset`, normalize it in the store, not in each consuming page.
 
 ---
 
@@ -134,6 +138,105 @@ quality toggles via `onToggleSecondary`). `list` view is the denser original gri
 Strength/Quality `<optgroup>` selects (`QualitySelect` component). Both views edit the same
 `draft` state through the same `editWeek`/`toggleSecondary` callbacks — do not fork the
 edit logic per view.
+
+### Theme system: Noir / Ivory
+
+The app ships two full themes, toggled from a sidebar control in `Layout.tsx`:
+
+```
+Theme = "noir" | "ivory"   (default "noir")
+
+document.documentElement.dataset.theme  ← single source of truth for CSS
+localStorage["metron.theme"]            ← persistence
+```
+
+Mechanics:
+
+```
+index.html — inline <script> (before any CSS/JS loads) reads
+             localStorage["metron.theme"] and sets document.documentElement
+             .dataset.theme synchronously. This runs pre-paint so there is
+             no flash of the wrong theme on reload.
+  └─► src/index.css
+        :root { ... }                      — Noir tokens (default)
+        :root[data-theme="ivory"] { ... }  — Ivory token overrides, plus
+                                              per-selector overrides for
+                                              body::before, .sidebar,
+                                              .nav a.active, .pill.accent,
+                                              .bar-track, etc.
+  └─► Layout.tsx — useState<Theme>(initialTheme), useEffect writes
+        document.documentElement.dataset.theme, updates the
+        <meta name="theme-color"> tag, and persists to localStorage
+        (wrapped in try/catch — private-mode storage can throw)
+```
+
+All themeable surface, text, and chart colors are CSS custom properties (see
+Section 4's variable list, plus the newer chart tokens `--series-1`,
+`--chart-grid`, `--chart-axis`, `--chart-axis-strong`, `--tooltip-bg`,
+`--tooltip-border`, `--tooltip-text`, and the glass tokens `--glass-sheen`,
+`--glass-tint`, `--glass-edge`, `--glow`, `--ring`, `--head-grad`). Every
+Recharts chart across Overview/Correlations/CrossSport/PeerComparison/
+Periodization/Results passes these as `var(--token)` strings into SVG
+presentation props (`stroke`, `fill`, `contentStyle.background`, etc.) rather
+than hardcoded hex, so a single theme switch re-colors every chart's chrome
+without touching component code. Identity colors (`CATEGORY_COLORS`,
+`SPORT_COLORS`, `STRENGTH_PHASE_COLOR`, `QUALITY_COLOR`, `PRIORITY_COLOR`) are
+intentionally left as fixed hex values — they encode "which category/sport/
+phase is this," not "what does the surface look like," and must stay stable
+across themes so a sport's color doesn't change when the coach flips themes.
+
+If you add a new chart, follow the existing pattern: reference the chart
+tokens via `var(--...)`, never introduce a new hardcoded hex for grid lines,
+axes, or tooltips.
+
+### Competition scheduling on the periodization plan
+
+Layered onto the plan builder (`PlanBuilder` in `Periodization.tsx`), coaches
+can attach a list of future competitions (name, date, A/B/C priority) to the
+plan being built:
+
+```
+PlannedCompetition (types.ts): { id, athleteId, sportId, date, name, priority }
+CompetitionPriority = "A" | "B" | "C"   (A = key/taper target, B = important,
+                                          C = training comp)
+
+Dataset.plannedCompetitions?: PlannedCompetition[]   — optional field; the
+  store normalizes it to `[]` (see READ ME FIRST #11) so older persisted
+  datasets don't need a migration.
+
+PlanBuilder local state: DraftComp[] (key, date, name, priority)
+  — seeded on mount from any existing plannedCompetitions matching the
+    current athlete+sport (re-seeds when you switch athlete/sport since the
+    component is keyed by both).
+  addComp / editComp / removeComp — plain array-of-objects edits, same
+    "state holds user input, derive the rest" pattern as draft weeks.
+  compMarkers (useMemo) — maps each dated competition onto the index of the
+    draft week whose 7-day range contains it (compsInWeek/isoDayOffset
+    helpers), for chart/calendar placement.
+
+saveDraft() persists BOTH collections together:
+  saveTrainingPlan(athleteId, sportId, draft)              — the weeks
+  savePlannedCompetitions(athleteId, sportId, comps)        — the schedule
+savePlannedCompetitions (store.tsx) is a replace-by-scope mutation: it drops
+  any existing entries for this athleteId+sportId and re-inserts the current
+  comps list. It does NOT upsert per-competition and does NOT touch other
+  athletes'/sports' schedules.
+```
+
+Rendering surfaces for a scheduled competition:
+- **Load curve chart** — a dashed, priority-colored Recharts `ReferenceLine`
+  at the competition's week, labelled with its name; the A/B/C legend only
+  renders entries for priorities actually in use (`PRIORITY_COLOR`,
+  `PRIORITY_ORDER` — page-local constants, same convention as
+  `STRENGTH_PHASE_COLOR`/`QUALITY_COLOR`).
+- **Calendar view** — a priority-colored trophy banner on the week card that
+  contains the competition.
+- **List view** — a trophy marker with a hover tooltip next to the week's
+  start date.
+
+The plan setup card also flags a competition whose date falls outside the
+current draft's week range ("outside plan" warning) — this is a UI hint only,
+not a validation error; an out-of-range competition is still saved.
 
 ### The `commonTests()` fairness pattern
 
@@ -317,14 +420,26 @@ If you switch hosting to a server that supports rewrites (Vercel, Netlify, etc.)
 - Added a utility function parameter for future use? Prefix with `_` or build fails.
 - Used `import { A, B }` but only referenced `A`? Remove `B` or build fails.
 
-### Strength-phase and training-quality colors are page-local, not in `catalog.ts`
+### Strength-phase, training-quality, and competition-priority colors are page-local, not in `catalog.ts`
 
 Unlike `CATEGORY_COLORS` and `SPORT_COLORS`, which live in `src/data/catalog.ts` per the
-CSS-variable/color convention in Section 4, `STRENGTH_PHASE_COLOR` and `QUALITY_COLOR`
-(added with the Periodization plan builder) are defined at the top of
-`src/pages/Periodization.tsx`. This was a deliberate scoping choice since only that page
-uses them today. If you need these colors on another page, move them to `catalog.ts` first
-rather than importing them from `Periodization.tsx` or re-declaring a duplicate map.
+CSS-variable/color convention in Section 4, `STRENGTH_PHASE_COLOR`, `QUALITY_COLOR` (added
+with the Periodization plan builder), and `PRIORITY_COLOR` (added with competition
+scheduling) are defined at the top of `src/pages/Periodization.tsx`. This was a deliberate
+scoping choice since only that page uses them today. If you need these colors on another
+page, move them to `catalog.ts` first rather than importing them from `Periodization.tsx`
+or re-declaring a duplicate map.
+
+### Chart chrome colors must be theme tokens, not hex literals
+
+Since the Noir/Ivory theme system landed (`src/index.css`, `:root` vs.
+`:root[data-theme="ivory"]`), every chart's non-identity chrome — grid lines, axis strokes,
+tooltip background/border/text, the primary area/line series — is wired through CSS custom
+properties consumed as `var(--token)` strings in Recharts JSX (see "Theme system" in Section
+2). Copy-pasting an old chart snippet with a literal hex (`stroke="#243456"`) will silently
+break in Ivory mode while looking correct in Noir, because Noir happens to still ship
+similar-looking colors as its defaults. Always check `git grep "var(--chart"` for the
+current token names before adding a new chart.
 
 ### `latestTests` is O(n) over all test results
 
