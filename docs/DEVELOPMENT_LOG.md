@@ -4,6 +4,70 @@ A chronological record of what was built, in what order, and why. Newest first.
 
 ---
 
+## 2026-07-02 — Tabbed athlete profile: overview, schedule, calendar, testing (branch `claude/athlete-profile-organization-dl255l`)
+
+**What:** `AthleteProfile.tsx` is reorganised into four tabs so an athlete's
+whole record lives on one page instead of being scattered across the app.
+
+- **Overview** — the previous default view: test progression chart, planned
+  vs actual training load, and logged competition results. This is the
+  athlete's historical data.
+- **Schedule** — a read-focused view of the athlete's periodization: a phase
+  breakdown table (weeks, avg planned/actual load, adherence) computed from
+  `athleteTrainingWeeks`, and the list of `plannedCompetitions` for this
+  athlete+sport. An "Edit plan →" link deep-links into the Periodization
+  builder with the athlete and sport preselected (see below) rather than
+  duplicating the full plan-builder UI inside the profile.
+- **Calendar** — a new unified week-by-week view merging three previously
+  separate signals for this athlete+sport: `TrainingWeek` (phase, strength
+  phase, primary quality, load), logged `TestResult`s, and both past
+  `CompetitionResult`s and future `PlannedCompetition`s. Weeks with no data
+  render muted (still visible, for calendar continuity) rather than being
+  omitted. Paginated 12 weeks (~3 months) at a time via ← Earlier / Later →,
+  defaulting to a window centred just behind the athlete's most recent
+  logged week.
+- **Testing** — the test-battery-vs-peers table (moved here from the old
+  single-view profile) plus a new percentile radar chart adapted from
+  `PeerComparison.tsx`, scoped to the athlete already selected (no duplicate
+  athlete picker) with a link out to the full Peer Comparison page.
+- The bio card and the age/tests/competition-marks stat row stay visible
+  above the tabs — that's the part of "the profile" that's always true
+  regardless of which tab is open.
+
+**Periodization deep link:** `Periodization.tsx` now reads `?athlete=<id>` and
+`?mode=build` from the URL (`useSearchParams`) to preselect the sport and
+athlete (and jump straight into Build mode) when navigated to from a
+profile's Schedule tab. Falls back to its previous defaults (first sport,
+first athlete, Analyze mode) when no query params are present.
+
+**Catalogue refactor:** `PHASE_COLOR`, `PHASE_ORDER`, `STRENGTH_PHASE_COLOR`,
+`STRENGTH_PHASE_ORDER`, `QUALITY_GROUPS`, `ALL_QUALITIES`, `QUALITY_COLOR`,
+`PRIORITY_ORDER`, and `PRIORITY_COLOR` moved from page-local consts in
+`Periodization.tsx` into `src/data/catalog.ts`. The engineering mentorship doc
+is explicit that a second page needing these colors should promote them to
+the catalogue rather than re-declaring a duplicate map — the Calendar and
+Schedule tabs are exactly that second consumer, so this was done ahead of
+introducing a duplicate. `Periodization.tsx` now imports these from
+`catalog.ts`; `PHASE_DEFAULT_STRENGTH`/`PHASE_DEFAULT_QUALITY` (plan-generation
+defaults, not shared display data) stay page-local.
+
+**Why:** The roster previously spread an athlete's picture across four
+different pages (Athlete Profile, Periodization, Peer Comparison, plus
+whatever the Testing log showed). A coach preparing for a session with one
+athlete had to open several pages and mentally merge them. Consolidating into
+one profile with tabs — and linking out to the specialized builder rather
+than duplicating it — keeps the profile as the single source of truth for
+"everything about this athlete" without turning it into a second copy of the
+Periodization page.
+
+**Verification:** `tsc -b` clean; `npm run build` succeeds. Manually verified
+in a browser: all four tabs render with real seeded data, the calendar
+correctly places a newly-saved plan's phases/qualities/load and a newly
+scheduled competition on the right week, and the Periodization deep link
+preselects sport/athlete/mode. See `docs/TEST_VERIFICATION_PR9.md`.
+
+---
+
 ## 2026-07-01 — Competition scheduling on the plan (branch `claude/plan-competitions`)
 
 **What:** The plan builder can now schedule **competitions** (name + date +

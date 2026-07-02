@@ -1,4 +1,11 @@
-import type { Sport, TestType } from "../types";
+import type {
+  CompetitionPriority,
+  PeriodizationPhase,
+  Sport,
+  StrengthPhase,
+  TestType,
+  TrainingQuality,
+} from "../types";
 
 /**
  * Sports and their competition events. Marks for races are times in seconds
@@ -223,3 +230,101 @@ export function commonTests(): TestType[] {
     SPORTS.every((s) => t.sports.length === 0 || t.sports.includes(s.id)),
   );
 }
+
+// ── Periodization catalogue: phases, strength phases, training qualities ──────
+// Shared by the Periodization plan builder and the Athlete Profile
+// schedule/calendar tabs. Do not re-declare these color/order maps on another
+// page — extend them here so every consumer stays in sync.
+
+export const PHASE_ORDER: PeriodizationPhase[] = [
+  "Preparation",
+  "Pre-Competition",
+  "Competition",
+  "Transition",
+];
+
+export const PHASE_COLOR: Record<PeriodizationPhase, string> = {
+  Preparation: "#0ea5e9",
+  "Pre-Competition": "#8b5cf6",
+  Competition: "#f97316",
+  Transition: "#22c55e",
+};
+
+export const STRENGTH_PHASE_ORDER: StrengthPhase[] = [
+  "Accumulation",
+  "Intensification",
+  "Realization",
+  "Deload",
+  "Transition",
+];
+
+export const STRENGTH_PHASE_COLOR: Record<StrengthPhase, string> = {
+  Accumulation: "#38bdf8",
+  Intensification: "#a78bfa",
+  Realization: "#fb923c",
+  Deload: "#4ade80",
+  Transition: "#94a3b8",
+};
+
+export const QUALITY_GROUPS: { label: string; qualities: TrainingQuality[] }[] = [
+  {
+    label: "Strength",
+    qualities: [
+      "Anatomical Adaptation",
+      "Max Strength",
+      "Strength Endurance",
+      "Hypertrophy",
+      "Core Stability",
+      "Reactive Strength",
+    ],
+  },
+  {
+    label: "Speed & Power",
+    qualities: ["Power", "Speed", "Speed Endurance", "Agility"],
+  },
+  {
+    label: "Conditioning",
+    qualities: [
+      "Aerobic Base",
+      "Aerobic Capacity",
+      "Anaerobic Capacity",
+      "General Conditioning",
+    ],
+  },
+  {
+    label: "Support",
+    qualities: ["Mobility", "Technique", "Recovery", "Competition"],
+  },
+];
+
+export const ALL_QUALITIES: TrainingQuality[] = QUALITY_GROUPS.flatMap((g) => g.qualities);
+
+export const QUALITY_COLOR: Record<TrainingQuality, string> = {
+  "Anatomical Adaptation": "#d97706",
+  "Max Strength": "#ef4444",
+  "Strength Endurance": "#f97316",
+  "Hypertrophy": "#f43f5e",
+  "Core Stability": "#f472b6",
+  "Reactive Strength": "#a3e635",
+  "Power": "#eab308",
+  "Speed": "#facc15",
+  "Speed Endurance": "#fb923c",
+  "Agility": "#34d399",
+  "Aerobic Base": "#38bdf8",
+  "Aerobic Capacity": "#60a5fa",
+  "Anaerobic Capacity": "#a78bfa",
+  "General Conditioning": "#94a3b8",
+  "Mobility": "#2dd4bf",
+  "Technique": "#c084fc",
+  "Recovery": "#4ade80",
+  "Competition": "#fbbf24",
+};
+
+/** Standard competition priority order: A = key/taper target, B = important, C = training comp. */
+export const PRIORITY_ORDER: CompetitionPriority[] = ["A", "B", "C"];
+
+export const PRIORITY_COLOR: Record<CompetitionPriority, string> = {
+  A: "#f43f5e",
+  B: "#fbbf24",
+  C: "#94a3b8",
+};

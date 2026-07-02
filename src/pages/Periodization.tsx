@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Bar,
   CartesianGrid,
@@ -16,7 +17,20 @@ import {
 } from "recharts";
 import { PageHead } from "../components/Layout";
 import { Bar as LoadBar, Card } from "../components/ui";
-import { SPORTS, TEST_BY_ID, testsForSport } from "../data/catalog";
+import {
+  ALL_QUALITIES,
+  PHASE_COLOR,
+  PHASE_ORDER,
+  PRIORITY_COLOR,
+  PRIORITY_ORDER,
+  QUALITY_COLOR,
+  QUALITY_GROUPS,
+  SPORTS,
+  STRENGTH_PHASE_COLOR,
+  STRENGTH_PHASE_ORDER,
+  TEST_BY_ID,
+  testsForSport,
+} from "../data/catalog";
 import { athleteTrainingWeeks, useStore } from "../data/store";
 import { formatDate, formatMonth } from "../lib/format";
 import { correlationStrength, linearRegression, mean, round } from "../lib/stats";
@@ -29,39 +43,8 @@ import type {
   TrainingQuality,
 } from "../types";
 
-// ── Phase colours ─────────────────────────────────────────────────────────────
-
-const PHASE_COLOR: Record<PeriodizationPhase, string> = {
-  Preparation: "#0ea5e9",
-  "Pre-Competition": "#8b5cf6",
-  Competition: "#f97316",
-  Transition: "#22c55e",
-};
-
-const PHASE_ORDER: PeriodizationPhase[] = [
-  "Preparation",
-  "Pre-Competition",
-  "Competition",
-  "Transition",
-];
-
-// ── Strength phases ───────────────────────────────────────────────────────────
-
-const STRENGTH_PHASE_ORDER: StrengthPhase[] = [
-  "Accumulation",
-  "Intensification",
-  "Realization",
-  "Deload",
-  "Transition",
-];
-
-const STRENGTH_PHASE_COLOR: Record<StrengthPhase, string> = {
-  Accumulation: "#38bdf8",
-  Intensification: "#a78bfa",
-  Realization: "#fb923c",
-  Deload: "#4ade80",
-  Transition: "#94a3b8",
-};
+// ── Plan-generation defaults (page-local: only the builder needs a default
+// strength phase / quality per macrocycle phase) ───────────────────────────────
 
 const PHASE_DEFAULT_STRENGTH: Record<PeriodizationPhase, StrengthPhase> = {
   Preparation: "Accumulation",
@@ -70,77 +53,11 @@ const PHASE_DEFAULT_STRENGTH: Record<PeriodizationPhase, StrengthPhase> = {
   Transition: "Transition",
 };
 
-// ── Training qualities ────────────────────────────────────────────────────────
-
-const QUALITY_GROUPS: { label: string; qualities: TrainingQuality[] }[] = [
-  {
-    label: "Strength",
-    qualities: [
-      "Anatomical Adaptation",
-      "Max Strength",
-      "Strength Endurance",
-      "Hypertrophy",
-      "Core Stability",
-      "Reactive Strength",
-    ],
-  },
-  {
-    label: "Speed & Power",
-    qualities: ["Power", "Speed", "Speed Endurance", "Agility"],
-  },
-  {
-    label: "Conditioning",
-    qualities: [
-      "Aerobic Base",
-      "Aerobic Capacity",
-      "Anaerobic Capacity",
-      "General Conditioning",
-    ],
-  },
-  {
-    label: "Support",
-    qualities: ["Mobility", "Technique", "Recovery", "Competition"],
-  },
-];
-
-const ALL_QUALITIES: TrainingQuality[] = QUALITY_GROUPS.flatMap((g) => g.qualities);
-
-const QUALITY_COLOR: Record<TrainingQuality, string> = {
-  "Anatomical Adaptation": "#d97706",
-  "Max Strength": "#ef4444",
-  "Strength Endurance": "#f97316",
-  "Hypertrophy": "#f43f5e",
-  "Core Stability": "#f472b6",
-  "Reactive Strength": "#a3e635",
-  "Power": "#eab308",
-  "Speed": "#facc15",
-  "Speed Endurance": "#fb923c",
-  "Agility": "#34d399",
-  "Aerobic Base": "#38bdf8",
-  "Aerobic Capacity": "#60a5fa",
-  "Anaerobic Capacity": "#a78bfa",
-  "General Conditioning": "#94a3b8",
-  "Mobility": "#2dd4bf",
-  "Technique": "#c084fc",
-  "Recovery": "#4ade80",
-  "Competition": "#fbbf24",
-};
-
 const PHASE_DEFAULT_QUALITY: Record<PeriodizationPhase, TrainingQuality> = {
   Preparation: "Max Strength",
   "Pre-Competition": "Power",
   Competition: "Speed",
   Transition: "Recovery",
-};
-
-// ── Competition priorities ────────────────────────────────────────────────────
-
-const PRIORITY_ORDER: CompetitionPriority[] = ["A", "B", "C"];
-
-const PRIORITY_COLOR: Record<CompetitionPriority, string> = {
-  A: "#f43f5e",
-  B: "#fbbf24",
-  C: "#94a3b8",
 };
 
 // ── Page modes ────────────────────────────────────────────────────────────────
@@ -152,13 +69,19 @@ type WeekView = "calendar" | "list";
 
 export default function Periodization() {
   const { athletes, testResults, trainingWeeks } = useStore();
-  const [mode, setMode] = useState<Mode>("analyze");
-  const [sportId, setSportId] = useState(SPORTS[0].id);
+  // Deep-link support: the Athlete Profile's Schedule tab links here with
+  // ?athlete=<id>&mode=build so "edit" jumps straight to that athlete's plan.
+  const [searchParams] = useSearchParams();
+  const presetAthlete = athletes.find((a) => a.id === searchParams.get("athlete"));
+  const [mode, setMode] = useState<Mode>(
+    searchParams.get("mode") === "build" ? "build" : "analyze",
+  );
+  const [sportId, setSportId] = useState(presetAthlete?.profiles[0]?.sportId ?? SPORTS[0].id);
   const sportAthletes = useMemo(
     () => athletes.filter((a) => a.profiles.some((p) => p.sportId === sportId)),
     [athletes, sportId],
   );
-  const [athleteId, setAthleteId] = useState(sportAthletes[0]?.id ?? "");
+  const [athleteId, setAthleteId] = useState(presetAthlete?.id ?? sportAthletes[0]?.id ?? "");
   const athlete = sportAthletes.find((a) => a.id === athleteId) ?? sportAthletes[0];
   const [testId, setTestId] = useState("cmj");
   const testType = TEST_BY_ID[testId];
